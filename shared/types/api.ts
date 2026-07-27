@@ -1,0 +1,207 @@
+/**
+ * Типы ответов API. Переписаны из API_FRONTEND.md, раздел 6 — соответствуют
+ * ответам один в один. Проверить расхождение с бэкендом: `npm run types:api`
+ * (детектор дрейфа, вне сборки — API может быть недоступен при билде).
+ */
+
+// ─────────────────────────────── перечисления
+
+export type CompetitionType = 'championship' | 'tournament'
+export type GameStage = 'matches' | 'quarterfinal' | 'semifinal' | 'final'
+export type GameStatus = 'scheduled' | 'finished'
+/** ⚠️ значения приходят на русском, не латиницей */
+export type PlayerPosition = 'вратарь' | 'защитник' | 'нападающий'
+
+// ─────────────────────────────── общее
+
+/** Конверт только у команд, игроков и соревнований. size максимум 200. */
+export interface Page<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+}
+
+/** detail — строка для 404, массив объектов для 422 */
+export interface ApiError {
+  detail:
+    | string
+    | { type: string; loc: (string | number)[]; msg: string; input?: unknown }[]
+  code?: string
+}
+
+// ─────────────────────────────── справочники
+
+export interface Team {
+  id: number
+  name: string
+  /** уникален, генерируется транслитерацией. API его НЕ принимает — только id. */
+  slug: string
+  city: string | null
+  /** относительный: /media/… */
+  logo_url: string | null
+}
+
+export interface Player {
+  id: number
+  full_name: string
+  /** YYYY-MM-DD */
+  birth_date: string | null
+  position: PlayerPosition | null
+  /** хват — свободная строка, не enum */
+  grip: string | null
+  /** относительный: /media/… */
+  photo_url: string | null
+}
+
+// ─────────────────────────────── соревнования
+
+export interface Competition {
+  id: number
+  type: CompetitionType
+  name: string
+  start_date: string
+  end_date: string | null
+  location: string | null
+  logo_url: string | null
+  show_playoff_bracket: boolean
+  show_best_players: boolean
+  winner_team_id: number | null
+}
+
+/** Заявка игрока в соревновании. Игровой номер живёт здесь, а не в Player. */
+export interface RosterPlayer {
+  player: Player
+  team_id: number
+  number: number | null
+  contract: boolean
+}
+
+export interface RosterTeam {
+  team: Team
+  players: RosterPlayer[]
+}
+
+/** Заявка + статистика игрока именно в этом соревновании */
+export interface CompetitionPlayerWithStats extends RosterPlayer {
+  goals: number
+  assists: number
+  /** = goals + assists */
+  points: number
+  penalties: number
+  games: number
+}
+
+// ─────────────────────────────── статистика
+
+export interface StandingRow {
+  /** объект команды вложен целиком — справочник здесь не нужен */
+  team: Team
+  games: number
+  wins: number
+  losses: number
+  draws: number
+  goals_scored: number
+  goals_conceded: number
+  /** очки за победу по буллитам; УЖЕ входят в points */
+  extra_points: number
+  /** = wins * 2 + draws + extra_points */
+  points: number
+}
+
+export interface PlayerStatTotals {
+  games: number
+  goals: number
+  assists: number
+  points: number
+  penalties: number
+  /** вратарские; у полевых всегда 0 */
+  goals_against: number
+  saves: number
+  minutes_played: number
+}
+
+export interface PlayerStatsBreakdown {
+  player_id: number
+  /** ⚠️ только career меняется query-фильтрами; разбивки всегда по всей карьере */
+  career: PlayerStatTotals
+  by_competition: {
+    competition_id: number
+    competition_name: string
+    totals: PlayerStatTotals
+  }[]
+  by_team: { team_id: number; team_name: string; totals: PlayerStatTotals }[]
+}
+
+export interface BestPlayer {
+  player: Player
+  /**
+   * ⚠️ Сервер сейчас ВСЕГДА отдаёт null (подводный камень №7) — команду искать
+   * в /competitions/{id}/players. Тип оставлен `number | null` осознанно:
+   * зашить `null` — значит поломать компиляцию всем потребителям в день,
+   * когда бэкенд это починит.
+   */
+  team_id: number | null
+  goals: number
+  assists: number
+  points: number
+  penalties: number
+}
+
+// ─────────────────────────────── матчи
+
+export interface Game {
+  id: number
+  competition_id: number
+  /** названий команд НЕТ — нужен справочник команд */
+  team_a_id: number
+  team_b_id: number
+  score_team_a: number | null
+  score_team_b: number | null
+  /** YYYY-MM-DD */
+  date: string
+  /** HH:MM:SS */
+  time: string | null
+  location: string | null
+  /** URL скана бумажного протокола (PDF или картинка) */
+  scan: string | null
+  video_url: string | null
+  stage: GameStage
+  status: GameStatus
+  /** осмыслен только при равном счёте, и сервер его не валидирует */
+  bullet_win_team_id: number | null
+  /** поля сетки плей-офф: заполняются руками, не валидируются, часто null */
+  round_no: number | null
+  bracket_slot: number | null
+  next_game_id: number | null
+}
+
+/** Строка протокола матча */
+export interface PlayerStatLine {
+  player_id: number
+  team_id: number
+  goals: number
+  assists: number
+  penalties: number
+  is_goalie: boolean
+  /** непусты только у вратарей — но и у вратаря могут быть null */
+  goals_against: number | null
+  saves: number | null
+  minutes_played: number | null
+  /** теоретически null — подстраховаться обязательно */
+  player: Player | null
+}
+
+export interface GameWithProtocol extends Game {
+  /** может быть пустым даже у сыгранного матча со счётом */
+  player_stats: PlayerStatLine[]
+}
+
+// ─────────────────────────────── главная
+
+export interface Homepage {
+  show_bracket: boolean
+  bracket_competition_id: number | null
+  show_standings: boolean
+  standings_competition_id: number | null
+}

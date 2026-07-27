@@ -1,0 +1,26 @@
+{
+  "name": "vremya-zvezd",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "mock": "node mocks/server.mjs",
+    "dev:mock": "NUXT_PUBLIC_API_BASE=http://localhost:8099 nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "types:api": "openapi-typescript ${NUXT_PUBLIC_API_BASE:-http://localhost:8002}/openapi.json -o shared/types/api-generated.d.ts"
+  },
+  "dependencies": {
+    "nuxt": "^4.5.1",
+    "vue": "^3.5.21",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.2",
+    "vue-tsc": "^3.1.1"
+  }
+}

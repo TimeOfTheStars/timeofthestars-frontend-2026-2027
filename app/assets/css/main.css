@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+/* Тему переключаем классом на <html>, а не системной темой:
+   на сайте есть свой тумблер, и он должен побеждать в обе стороны. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   Шрифт. Golos Text — единственное семейство на весь сайт.
+   Переменный (wght 400–900), самохостинг, никакой сети при сборке.
+   Выбран по фактам: есть tnum (у Oswald его нет, а цифры
+   пропорциональные с разбросом ~37% — в колонке они бы съезжали).
+   ───────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/golos-text-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/golos-text-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Палитра. Снята пиксельным анализом логотипа «Время звёзд»
+   и переведена в OKLCH: синий H=263, красный H=28, сталь H=277.
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  /* синий — кольцо и лента бейджа */
+  --color-blue-50: #eef5ff;
+  --color-blue-100: #e0ecff;
+  --color-blue-200: #c5d8fd;
+  --color-blue-300: #a3c1fb;
+  --color-blue-400: #759dec;
+  --color-blue-500: #507dd6;
+  --color-blue-600: #335cb2;
+  --color-blue-700: #274b97;
+  --color-blue-800: #1c3977;
+  --color-blue-900: #132856;
+  --color-blue-950: #0b1833;
+
+  /* красный — звезда. Только акцент и заливка, никогда текст на синем */
+  --color-red-50: #fff0ed;
+  --color-red-100: #ffe2dd;
+  --color-red-200: #ffc7be;
+  --color-red-300: #ffa497;
+  --color-red-400: #f47062;
+  --color-red-500: #dc4037;
+  --color-red-600: #b51213;
+  --color-red-700: #990007;
+  --color-red-800: #790003;
+
+  /* сталь — холодный нейтральный */
+  --color-steel-50: #f3f6ff;
+  --color-steel-100: #e9ecfc;
+  --color-steel-200: #d5d8e8;
+  --color-steel-300: #bdc0cf;
+  --color-steel-400: #9b9dac;
+  --color-steel-500: #7d7f8e;
+  --color-steel-600: #5d606e;
+  --color-steel-700: #4c4f5c;
+  --color-steel-800: #3a3c49;
+  --color-steel-900: #282a36;
+  --color-steel-950: #171924;
+
+  --font-sans: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* высота липкой шапки — от неё считаются все sticky top-* */
+  --spacing-header: 3.5rem;
+}
+
+/* Семантические токены. inline, чтобы утилиты подставляли var()
+   и переключение по .dark работало во время выполнения. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-flag: var(--flag);
+  --color-flag-fg: var(--flag-fg);
+}
+
+@layer base {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: var(--color-steel-50);
+    --text: var(--color-steel-900);
+    --text-muted: var(--color-steel-600);
+    --rule: var(--color-steel-200);
+    --rule-strong: var(--color-steel-400);
+    --accent: var(--color-blue-700);
+    --accent-fg: #ffffff;
+    --flag: var(--color-red-600);
+    --flag-fg: #ffffff;
+    color-scheme: light;
+  }
+
+  .dark {
+    --bg: var(--color-steel-950);
+    --surface: var(--color-steel-900);
+    --surface-2: #1f2130;
+    --text: var(--color-steel-50);
+    --text-muted: var(--color-steel-300);
+    --rule: var(--color-steel-700);
+    --rule-strong: var(--color-steel-500);
+    --accent: var(--color-blue-300);
+    --accent-fg: var(--color-steel-950);
+    --flag: var(--color-red-400);
+    --flag-fg: var(--color-steel-950);
+    color-scheme: dark;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+    Здесь СОЗНАТЕЛЬНО нет `overflow-x: hidden`.
+    Он бы «убрал» горизонтальный скролл, но лишь спрятал причину: scrollWidth
+    сравнялся бы с clientWidth, и автопроверка на 375px перестала бы что-либо
+    ловить. Ширину держим по построению (table-fixed, min-w-0, truncate),
+    а не подавлением симптома.
+  */
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    /* 13px — пол для всего, что читает болельщик на трибуне */
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  /* Цифры — контент этого сайта. Везде табличные, иначе колонки дрожат. */
+  table,
+  .num,
+  [data-num] {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Заголовки набираем плотнее — Golos на больших кеглях иначе разъезжается */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Единая обёртка контента: 16px гуттеры на телефоне = 343px на 375px */
+  .container-page {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  /* Таблица в край экрана на телефоне, оптические отступы возвращают
+     pl-4/pr-4 на крайних ячейках. См. план, раздел 5.1. */
+  .table-bleed {
+    margin-inline: -1rem;
+    width: calc(100% + 2rem);
+  }
+
+  @media (min-width: 640px) {
+    .table-bleed {
+      margin-inline: 0;
+      width: 100%;
+    }
+  }
+
+  /* Полоса прокрутки у карусели скрыта, сама прокрутка остаётся */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /*
+    Соединители сетки плей-офф — только с lg и только для канонической сетки.
+    Это КОРОТКИЕ ОТВОДЫ на самой карточке, а не сквозное дерево: какая пара
+    выходит на какую в следующем раунде, данные достоверно не сообщают
+    (next_game_id заполняется руками и не валидируется). Отвод показывает
+    направление движения, ничего не утверждая о конкретных парах — и поэтому
+    нечётное или неожиданное число пар в стадии ничего не ломает.
+  */
+  @media (min-width: 1024px) {
+    .bk-cell {
+      position: relative;
+    }
+    .bk-cell[data-out]::after,
+    .bk-cell[data-in]::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 1.5rem;
+      border-top: 2px solid var(--rule-strong);
+    }
+    .bk-cell[data-out]::after {
+      left: 100%;
+    }
+    .bk-cell[data-in]::before {
+      right: 100%;
+    }
+  }
+}
