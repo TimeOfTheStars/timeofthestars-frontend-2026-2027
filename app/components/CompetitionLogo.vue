@@ -16,7 +16,7 @@ watch(() => props.src, () => (failed.value = false))
 
 <template>
   <img
-    :src="url ?? '/brand/logo-vremya-zvezd-512.png'"
+    :src="url ?? '/brand/logo-vremya-zvezd-128.png'"
     alt=""
     :width="size"
     :height="size"

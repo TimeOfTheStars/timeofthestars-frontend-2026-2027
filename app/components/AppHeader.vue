@@ -14,7 +14,7 @@ const { theme, toggle } = useColorTheme()
         aria-label="Время звёзд — на главную"
       >
         <img
-          src="/brand/logo-vremya-zvezd-512.png"
+          src="/brand/logo-vremya-zvezd-128.png"
           alt=""
           width="36"
           height="36"

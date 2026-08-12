@@ -8,7 +8,7 @@ const year = new Date().getFullYear()
       <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex items-start gap-3">
           <img
-            src="/brand/logo-vremya-zvezd-512.png"
+            src="/brand/logo-vremya-zvezd-128.png"
             alt=""
             width="44"
             height="44"
@@ -18,11 +18,13 @@ const year = new Date().getFullYear()
             <p class="text-sm font-extrabold tracking-tight">
               ВРЕМЯ ЗВЁЗД
             </p>
+            <!-- Понятия «сезон» в API нет вообще: у соревнования есть только
+                 start_date / end_date. Захардкоженный «Сезон 2026/2027» был
+                 бы утверждением, которое нечем подтвердить и которое молча
+                 устареет. Сроки показываются там, где они реально есть, —
+                 на карточке соревнования. -->
             <p class="mt-0.5 text-xs text-muted">
               Регулярные хоккейные игры и турниры
-            </p>
-            <p class="mt-0.5 text-xs text-muted">
-              Сезон 2026/2027
             </p>
           </div>
         </div>

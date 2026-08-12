@@ -53,10 +53,17 @@ const cols = computed(() => bracket.value.groups.length)
       class="lg:grid lg:items-stretch lg:gap-12"
       :style="cols > 1 ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined"
     >
+      <!--
+        lg:flex flex-col — не украшение. Список пар должен занимать ВСЮ
+        оставшуюся высоту колонки, но именно оставшуюся: с `h-full` он брал
+        100% высоты секции, начинаясь при этом ниже заголовка стадии, и
+        свисал за её нижнюю границу ровно на высоту заголовка — накрывая
+        плашку чемпиона. flex-1 отмеряет остаток честно.
+      -->
       <section
         v-for="(group, gi) in bracket.groups"
         :key="group.stage"
-        class="mb-6 last:mb-0 lg:mb-0"
+        class="mb-6 last:mb-0 lg:mb-0 lg:flex lg:flex-col"
         :aria-labelledby="`bk-${group.stage}`"
       >
         <h3
@@ -67,7 +74,7 @@ const cols = computed(() => bracket.value.groups.length)
         </h3>
 
         <ol
-          class="space-y-3 lg:grid lg:h-full lg:content-around lg:space-y-0 lg:gap-6"
+          class="space-y-3 lg:grid lg:flex-1 lg:content-around lg:space-y-0 lg:gap-6"
         >
           <li
             v-for="tie in group.ties"

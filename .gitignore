@@ -21,3 +21,6 @@ node_modules
 .idea
 .vscode/*
 !.vscode/extensions.json
+
+# Other
+API_FRONTEND.md

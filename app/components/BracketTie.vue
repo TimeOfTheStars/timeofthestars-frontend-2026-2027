@@ -12,6 +12,22 @@ const sides = computed(() => [
 ])
 
 const isSeries = computed(() => props.tie.games.length > 1)
+
+/**
+ * Статус пары, а не отдельного матча.
+ *
+ * «Завершён» ставится только когда сыграны ВСЕ матчи пары. Раньше здесь
+ * стояло `anyPlayed`, и серия, где сыгран 1 матч из 3, объявлялась
+ * завершённой — при том что победитель по данным ещё не определён.
+ * Промежуточное состояние подписываем счётом матчей, а не словом «идёт»:
+ * API не знает, что происходит прямо сейчас.
+ */
+const statusLabel = computed(() => {
+  const t = props.tie
+  if (t.allPlayed) return STATUS_LABEL.finished
+  if (t.anyPlayed) return `Сыграно ${t.playedCount} из ${t.games.length}`
+  return STATUS_LABEL.scheduled
+})
 /** Единственный матч пары — ссылка ведёт прямо на него */
 const single = computed(() => (props.tie.games.length === 1 ? props.tie.games[0]! : null))
 const singleOutcome = computed(() => (single.value ? gameOutcome(single.value) : null))
@@ -75,9 +91,9 @@ const singleOutcome = computed(() => (single.value ? gameOutcome(single.value) :
         <!-- Статус у каждой пары, а не только у несыгранных -->
         <AppChip
           size="sm"
-          :variant="tie.anyPlayed ? 'accent' : 'neutral'"
+          :variant="tie.allPlayed ? 'accent' : 'neutral'"
         >
-          {{ tie.anyPlayed ? STATUS_LABEL.finished : STATUS_LABEL.scheduled }}
+          {{ statusLabel }}
         </AppChip>
         <AppChip
           v-if="singleOutcome?.shootout"

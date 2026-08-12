@@ -257,8 +257,14 @@ function addGame({ compId, a, b, dayOffset, stage = 'matches', time, location, p
     // Время у части будущих матчей не назначено
     time: time !== undefined ? time : (isPlayed || rnd() < 0.75 ? `${int(9, 21)}:${pick(['00', '30'])}:00` : null),
     location: location !== undefined ? location : (rnd() < 0.8 ? pick(['ЛД «Арена»', 'ЛД «Кристалл»', 'ЦСКА Арена', 'ЛД «Северный»']) : null),
+    // Скан бывает только у сыгранного: это фото бумажного протокола.
     scan: isPlayed && rnd() < 0.4 ? `/media/scan-${id}.svg` : null,
-    video_url: isPlayed && rnd() < 0.25 ? 'https://youtu.be/dQw4w9WgXcQ' : null,
+    // А video_url бывает и у будущего матча — там это анонс трансляции,
+    // и подпись кнопки на фронте от этого меняется. Без таких строк случай
+    // «запланирован + ссылка» нечем было бы проверить.
+    video_url: (isPlayed ? rnd() < 0.25 : rnd() < 0.3)
+      ? 'https://youtu.be/dQw4w9WgXcQ'
+      : null,
     stage,
     status: isPlayed ? 'finished' : 'scheduled',
     bullet_win_team_id: bulletWin,

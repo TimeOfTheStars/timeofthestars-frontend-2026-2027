@@ -32,6 +32,8 @@ export interface Tie {
   anyPlayed: boolean
   /** все матчи пары сыграны */
   allPlayed: boolean
+  /** сколько матчей пары со внесённым счётом */
+  playedCount: number
 }
 
 export interface StageGroup {
@@ -76,6 +78,7 @@ export function buildBracket(games: Game[]): Bracket {
         winnerId: null,
         anyPlayed: false,
         allPlayed: true,
+        playedCount: 0,
       }
       byKey.set(key, tie)
     }
@@ -85,6 +88,7 @@ export function buildBracket(games: Game[]): Bracket {
     const o = gameOutcome(g)
     if (o.played) {
       tie.anyPlayed = true
+      tie.playedCount++
       if (o.winnerId === tie.teamAId) tie.winsA++
       else if (o.winnerId === tie.teamBId) tie.winsB++
     }
@@ -94,8 +98,18 @@ export function buildBracket(games: Game[]): Bracket {
   }
 
   for (const tie of byKey.values()) {
-    tie.winnerId
-      = tie.winsA > tie.winsB ? tie.teamAId : tie.winsB > tie.winsA ? tie.teamBId : null
+    // Победителя пары объявляем ТОЛЬКО когда сыграны все её матчи.
+    // Иначе серия при счёте 1:0 и неотыгранном третьем матче назначала бы
+    // победителя, которого ещё нет, — и это невозможно отличить от настоящего
+    // результата. Для одиночного матча (99% пар) поведение не меняется:
+    // там allPlayed совпадает с «счёт внесён».
+    tie.winnerId = !tie.allPlayed
+      ? null
+      : tie.winsA > tie.winsB
+        ? tie.teamAId
+        : tie.winsB > tie.winsA
+          ? tie.teamBId
+          : null
   }
 
   const groups: StageGroup[] = []

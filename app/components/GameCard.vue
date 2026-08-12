@@ -53,13 +53,21 @@ const sides = computed(() => [
         </template>
       </div>
 
-      <!-- Статус есть у КАЖДОГО матча, а не только у запланированных -->
+      <!--
+        Статус есть у КАЖДОГО матча, а не только у запланированных.
+
+        Берём поле `status` из API, а не выводим его из наличия счёта. Сервер
+        выставляет `finished` сам, когда внесены оба счёта, — то есть значения
+        совпадают, но источником должно быть поле: по нему же разложены
+        разделы «Предстоящие» и «Результаты», и подпись не может с ними
+        разойтись.
+      -->
       <div class="mb-2.5 flex flex-wrap items-center gap-1.5">
         <AppChip
           size="sm"
-          :variant="outcome.played ? 'accent' : 'neutral'"
+          :variant="game.status === 'finished' ? 'accent' : 'neutral'"
         >
-          {{ outcome.played ? STATUS_LABEL.finished : STATUS_LABEL.scheduled }}
+          {{ STATUS_LABEL[game.status] }}
         </AppChip>
         <AppChip
           v-if="showStage && game.stage !== 'matches'"

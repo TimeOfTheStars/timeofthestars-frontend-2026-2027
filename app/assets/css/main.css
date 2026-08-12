@@ -105,6 +105,8 @@
     --accent-fg: #ffffff;
     --flag: var(--color-red-600);
     --flag-fg: #ffffff;
+    /* свечение под логотипом на заставке: blue-200 в половину силы */
+    --hero-glow: #c5d8fd7a;
     color-scheme: light;
   }
 
@@ -120,6 +122,9 @@
     --accent-fg: var(--color-steel-950);
     --flag: var(--color-red-400);
     --flag-fg: var(--color-steel-950);
+    /* в тёмной теме свечение берётся от blue-800: на steel-950 оно читается
+       как подсветка, а не как светлое пятно */
+    --hero-glow: #1c397780;
     color-scheme: dark;
   }
 
@@ -197,6 +202,48 @@
     .table-bleed {
       margin-inline: 0;
       width: 100%;
+    }
+  }
+
+  /*
+    Экран-заставка главной.
+
+    Высота задана здесь, а не утилитой в шаблоне, ровно из-за запасного
+    варианта: сначала vh, следом svh. Браузер без поддержки svh просто
+    оставит первое значение, а в Tailwind две конкурирующие декларации
+    одного свойства так не записать.
+
+    Вычитаем шапку (3.5rem), а до lg — ещё и нижнюю панель (3.5rem):
+    она фиксированная и накрыла бы низ заставки вместе с кнопкой.
+  */
+  .hero-screen {
+    min-height: calc(100vh - 7rem);
+    min-height: calc(100svh - 7rem);
+    background:
+      radial-gradient(72% 55% at 50% 34%, var(--hero-glow), transparent 72%),
+      linear-gradient(180deg, var(--surface-2) 0%, var(--bg) 76%);
+  }
+
+  @media (min-width: 1024px) {
+    .hero-screen {
+      min-height: calc(100vh - 3.5rem);
+      min-height: calc(100svh - 3.5rem);
+    }
+  }
+
+  /* Подсказка «листайте вниз». Глобальное правило prefers-reduced-motion
+     гасит эту анимацию вместе со всеми остальными. */
+  .hero-cue {
+    animation: hero-bob 1.9s ease-in-out infinite;
+  }
+
+  @keyframes hero-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(3px);
     }
   }
 

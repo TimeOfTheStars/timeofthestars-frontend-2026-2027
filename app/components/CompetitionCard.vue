@@ -23,11 +23,15 @@ const winner = computed(() => team(props.competition.winner_team_id))
         <AppChip variant="outline">
           {{ COMPETITION_TYPE_LABEL[competition.type] }}
         </AppChip>
+        <!-- Кубок, а не звезда: звездой на сайте отмечена «моя команда»,
+             и звезда с названием команды читалась как она, а не как
+             winner_team_id соревнования. -->
         <AppChip
           v-if="winner"
           size="sm"
           variant="accent"
-          icon="star"
+          icon="trophy"
+          title="Победитель соревнования"
         >
           {{ winner.name }}
         </AppChip>
