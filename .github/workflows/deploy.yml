@@ -81,10 +81,13 @@ jobs:
             set -euo pipefail
             cd /srv/timeofthestars
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
-            docker compose pull web
-            # --wait: если новый контейнер не станет healthy, деплой упадёт с ошибкой,
-            # а не оставит нас с молча сломанным сайтом
-            docker compose up -d --no-deps --wait --wait-timeout 120 web
+            docker compose pull
+            # Поднимаем весь стек, а не только web: на первой выкатке Caddy
+            # ещё не существует, а дальше compose его не тронет, пока не
+            # поменяется его конфиг или образ.
+            # --wait: если новый контейнер не станет healthy, деплой упадёт
+            # с ошибкой, а не оставит нас с молча сломанным сайтом.
+            docker compose up -d --wait --wait-timeout 120
             docker image prune -f
             # токен временный, но и его на диске не оставляем
             docker logout ghcr.io
