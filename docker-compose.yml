@@ -1,0 +1,49 @@
+services:
+  web:
+    image: ghcr.io/timeofthestars/timeofthestars-frontend-2026-2027:latest
+    restart: unless-stopped
+    environment:
+      NUXT_PUBLIC_API_BASE: https://api.timeofthestars.ru
+      NUXT_PUBLIC_SITE_URL: https://timeofthestars.ru
+      # SWR-кеш Nitro по умолчанию без вытеснения. На машине с 2 ГБ
+      # потолок кучи заставляет GC чистить кеш, а не расти до OOM.
+      NODE_OPTIONS: --max-old-space-size=640
+    expose:
+      - "3000"
+    mem_limit: 1g
+    healthcheck:
+      # /robots.txt — чистый обработчик, в API не ходит, всегда 200
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/robots.txt').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    mem_limit: 256m
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

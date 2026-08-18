@@ -27,6 +27,9 @@ export default defineNuxtConfig({
       '/games/**': { swr: 60 },
       '/teams/**': { swr: 300 },
       '/players/**': { swr: 300 },
+      // Карта сайта собирается из API до 7 запросами на каждый хит,
+      // а max-age внутри неё — кеш браузера, который краулер игнорирует.
+      '/sitemap.xml': { swr: 3600 },
     },
   },
 

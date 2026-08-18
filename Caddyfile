@@ -1,0 +1,47 @@
+{
+	# Автовыпуск сертификатов Let's Encrypt.
+	# Адрес нужен, чтобы приходили письма об истечении.
+	email a.orlov@trinity-aem.com
+}
+
+timeofthestars.ru {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+		-Server
+	}
+
+	# Имена файлов в /_nuxt содержат хеш содержимого — кешируем навсегда
+	@immutable path /_nuxt/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# app/pages/dev/sandbox.vue попадает в прод-сборку — наружу не отдаём
+	respond /dev/* 404
+
+	reverse_proxy web:3000 {
+		# Во время деплоя контейнер на пару секунд пропадает.
+		# Caddy подержит запрос и повторит, вместо того чтобы отдать 502.
+		lb_try_duration 15s
+		lb_try_interval 250ms
+		health_uri /robots.txt
+		health_interval 10s
+		health_timeout 3s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Раскомментировать ПОСЛЕ создания A-записи www.timeofthestars.ru → 5.129.241.16.
+# Раньше нельзя: Caddy не сможет пройти ACME-проверку и будет впустую
+# долбиться в Let's Encrypt, рискуя упереться в лимиты выпуска.
+#
+# www.timeofthestars.ru {
+# 	redir https://timeofthestars.ru{uri} permanent
+# }

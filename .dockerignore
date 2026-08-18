@@ -1,0 +1,30 @@
+# node_modules с дев-машины содержит lightningcss-darwin-arm64 —
+# под Linux он не заработает, ставим зависимости заново внутри образа
+node_modules
+.nuxt
+.output
+.data
+.nitro
+.cache
+dist
+
+.git
+.github
+.gitignore
+.gitattributes
+
+.env
+.env.*
+!.env.example
+
+# только для локальной разработки
+mocks
+API_FRONTEND.md
+
+*.log
+.DS_Store
+.idea
+.vscode
+README.md
+Caddyfile
+docker-compose.yml
