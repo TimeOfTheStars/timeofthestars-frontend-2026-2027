@@ -36,6 +36,13 @@ const ICONS: Record<string, string> = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
   alert:
     '<path d="M12 3.5 2.8 19a1 1 0 0 0 .87 1.5h16.66a1 1 0 0 0 .87-1.5L12 3.5Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  // Шайба: цилиндр в три четверти. В Lucide хоккейных иконок нет,
+  // геометрия своя, но обводка и сетка те же.
+  puck:
+    '<ellipse cx="12" cy="8.5" rx="7" ry="3.2"/><path d="M5 8.5v5c0 1.77 3.13 3.2 7 3.2s7-1.43 7-3.2v-5"/>',
+  // Смена: две встречные стрелки (Lucide arrow-left-right)
+  swap:
+    '<path d="m8 3-4 4 4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
 }
 
 const props = withDefaults(

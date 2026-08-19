@@ -59,6 +59,28 @@ export function parseVideo(url: string | null | undefined): VideoRef | null {
 }
 
 /** Скан протокола: PDF или картинка — от этого зависит способ показа. */
+/**
+ * Ссылка на момент в записи матча.
+ *
+ * Бэкенд хранит только смещение в секундах, а видео у матча одно —
+ * `Game.video_url`. Формат `?t=45m5s` понимают и VK, и YouTube, и RuTube.
+ *
+ * Возвращает null, если пусто любое из двух: сейчас `video_seconds` не
+ * проставлен ни у одного гола, хотя видео у матчей уже привязано, — то есть
+ * null это штатное состояние, а не сбой.
+ */
+export function videoAt(videoUrl: string | null | undefined, seconds: number | null | undefined): string | null {
+  if (!videoUrl || seconds == null) return null
+
+  const total = Math.max(0, Math.trunc(seconds))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const t = `${h ? `${h}h` : ''}${m ? `${m}m` : ''}${s}s`
+
+  return `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}t=${t}`
+}
+
 export function isPdf(path: string | null | undefined): boolean {
   return !!path && /\.pdf($|\?)/i.test(path)
 }

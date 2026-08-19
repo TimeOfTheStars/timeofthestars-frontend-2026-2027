@@ -34,6 +34,7 @@ const { $api } = useNuxtApp()
 
 const outcome = computed(() => (game.value ? gameOutcome(game.value) : null))
 const protocol = computed(() => (game.value ? buildProtocol(game.value) : null))
+const timeline = computed(() => (game.value ? buildTimeline(game.value) : null))
 const time = computed(() => ruTime(game.value?.time))
 const video = computed(() => parseVideo(game.value?.video_url))
 const scanUrl = computed(() => mediaUrl(game.value?.scan))
@@ -300,6 +301,33 @@ useHead(() => ({
         v-else-if="error"
         :pending="status === 'pending'"
         @retry="refresh()"
+      />
+    </div>
+
+    <!-- Хронология идёт ПЕРЕД протоколом: она интереснее таблицы очков.
+         Липкая полоса с якорями при этом остаётся вплотную к протоколу —
+         ради навигации по нему она и сделана. -->
+    <div
+      v-if="game && timeline"
+      class="container-page py-5"
+    >
+      <h2
+        id="timeline"
+        class="mb-4 scroll-mt-28 text-lg font-bold"
+      >
+        Хронология матча
+      </h2>
+
+      <EmptyState
+        v-if="timeline.isEmpty"
+        icon="clock"
+        title="Хронология матча не заполнена"
+        hint="Голы и удаления вносят отдельно от протокола, поэтому у сыгранного матча её может не быть."
+      />
+      <GameTimeline
+        v-else
+        :timeline="timeline"
+        :game="game"
       />
     </div>
 

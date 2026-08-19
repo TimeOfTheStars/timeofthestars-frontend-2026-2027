@@ -192,9 +192,48 @@ export interface PlayerStatLine {
   player: Player | null
 }
 
+/**
+ * Событие хронологии матча.
+ *
+ * Приходит только в `GET /games/{id}`; список матчей событий НЕ содержит.
+ * Массив уже отсортирован сервером: время → sort_order → id.
+ */
+export type GameEventType = 'goal' | 'shootout_goal' | 'penalty' | 'goalie_change'
+
+export interface GameEvent {
+  id: number
+  type: GameEventType
+  team_id: number
+  /** СКВОЗНОЕ время от начала матча: 1500 — это 25:00, а не 5:00 второго периода */
+  time_seconds: number
+  /** 1–3, 4 — овертайм, null у shootout_goal */
+  period: number | null
+  /** разводит события одной секунды; сервер уже применил его при сортировке */
+  sort_order: number
+  /** гол — автор, удаление — оштрафованный, смена вратаря — КТО ВЫШЕЛ на лёд */
+  player_id: number
+  /** теоретически null — подстраховаться обязательно */
+  player: Player | null
+  assist1_player_id: number | null
+  assist2_player_id: number | null
+  assist1: Player | null
+  assist2: Player | null
+  /** только penalty, в МИНУТАХ: два двухминутных дадут 4, а не 2 */
+  penalty_minutes: number | null
+  /** конец удаления, считает сервер: начало + минуты */
+  penalty_end_seconds: number | null
+  /** только голы; смещение в Game.video_url. Пока не проставлен нигде */
+  video_seconds: number | null
+}
+
 export interface GameWithProtocol extends Game {
   /** может быть пустым даже у сыгранного матча со счётом */
   player_stats: PlayerStatLine[]
+  /**
+   * Пуст даже у сыгранного матча: хронологию заполняют не всегда, а числа в
+   * player_stats при этом могут остаться от прежнего ручного ввода.
+   */
+  events: GameEvent[]
 }
 
 // ─────────────────────────────── главная
