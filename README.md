@@ -37,8 +37,9 @@ npm run dev:mock          # dev-сервер, смотрящий в мок
 `timeofthestars.ru` → VPS 5.129.241.16 (Timeweb, Москва, 2 vCPU / 2 ГБ, Ubuntu 26.04).
 Внутри — два контейнера: Caddy (TLS, реверс-прокси) и Nuxt.
 
-Конфигурация прода лежит на сервере в `/srv/timeofthestars/`
-(`docker-compose.yml` и `Caddyfile` — копии одноимённых файлов из этого репозитория).
+Конфигурация прода лежит на сервере в `/srv/timeofthestars/` — это
+`docker-compose.yml` и `caddy/Caddyfile`. Оба файла заливает деплой, так что
+править их надо в репозитории, а не на сервере.
 
 ### Деплой
 

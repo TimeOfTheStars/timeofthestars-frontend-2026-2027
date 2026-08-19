@@ -80,7 +80,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "docker-compose.yml,Caddyfile"
+          source: "docker-compose.yml,caddy/Caddyfile"
           target: /srv/timeofthestars
 
       - name: docker compose pull && up
@@ -102,8 +102,20 @@ jobs:
             # --wait: если новый контейнер не станет healthy, деплой упадёт
             # с ошибкой, а не оставит нас с молча сломанным сайтом.
             docker compose up -d --wait --wait-timeout 120
-            # up не перезапускает Caddy при правке только Caddyfile —
-            # он смонтирован томом, а не зашит в образ. Перечитываем явно.
+            # up не пересоздаёт Caddy, если поменялось только содержимое
+            # Caddyfile, — он смонтирован томом. Перечитываем явно.
+            #
+            # Но сперва убеждаемся, что контейнер вообще видит новый файл.
+            # Раньше конфиг монтировался одиночным файлом, scp заменял его
+            # через новый inode, монтирование застывало на старом содержимом,
+            # и reload молча применял устаревший конфиг. Теперь монтируется
+            # каталог, а эта проверка не даст ошибке снова пройти незаметно.
+            host_sum=$(md5sum caddy/Caddyfile | cut -d" " -f1)
+            cont_sum=$(docker compose exec -T caddy md5sum /etc/caddy/Caddyfile | cut -d" " -f1)
+            if [ "$host_sum" != "$cont_sum" ]; then
+              echo "Caddy видит не тот конфиг: хост $host_sum, контейнер $cont_sum"
+              exit 1
+            fi
             docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
             docker image prune -f
             # токен временный, но и его на диске не оставляем

@@ -15,17 +15,21 @@ timeofthestars.ru {
 		-Server
 	}
 
-	# Имена файлов в /_nuxt содержат хеш содержимого — кешируем навсегда
-	@immutable path /_nuxt/*
-	header @immutable Cache-Control "public, max-age=31536000, immutable"
+	# Nitro сам отдаёт /_nuxt/* с public, max-age=31536000, immutable —
+	# имена файлов там содержат хеш содержимого. Дублировать не нужно.
 
-	# Nitro при cache.swr=false отдаёт HTML с max-age=15, и браузер начинает
-	# кешировать страницу поверх серверного кеша — задержки складываются.
-	# Заставляем браузер перепроверять страницы: серверный кеш и так
-	# ограничивает нагрузку, а свежесть тогда ровно та, что задана в
-	# nuxt.config.ts, без удвоения.
+	# А вот страницам при cache.swr=false Nitro ставит max-age=15, и тогда
+	# HTML кешируется ещё и браузером поверх серверного кеша — задержки
+	# складываются. Заставляем браузер перепроверять.
+	#
+	# defer обязателен: без него header применяется ДО того, как
+	# reverse_proxy скопирует заголовки апстрима, и Nitro его перетирает.
+	# Проверено на проде — без defer уходил max-age=15.
 	@pages not path /_nuxt/* /fonts/* /sitemap.xml /robots.txt *.png *.jpg *.jpeg *.svg *.ico *.webp *.avif *.woff2
-	header @pages Cache-Control "no-cache"
+	header @pages {
+		Cache-Control "no-cache"
+		defer
+	}
 
 	# app/pages/dev/sandbox.vue попадает в прод-сборку — наружу не отдаём
 	respond /dev/* 404
