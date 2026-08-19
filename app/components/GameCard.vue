@@ -168,16 +168,23 @@ const sides = computed(() => [
       </p>
     </NuxtLink>
 
-    <!-- Кнопка протокола у каждого матча. Сосед ссылки на матч, не вложена. -->
+    <!--
+      Кнопка статистики у каждого матча. Сосед ссылки на матч, не вложена.
+
+      Ведёт на ?tab=stats, а не на якорь: разделы страницы матча стали
+      вкладками, и якоря #protocol больше нет. Подпись тоже сменилась —
+      «Протокол» там теперь означает скан бумажного протокола, отдельную
+      вкладку, и кнопка обещала бы не то, что открывает.
+    -->
     <NuxtLink
-      :to="`${gamePath(game.id)}#protocol`"
+      :to="{ path: gamePath(game.id), query: { tab: 'stats' } }"
       class="flex min-h-11 items-center justify-center gap-2 border-t border-rule text-sm font-semibold text-accent"
     >
       <AppIcon
         name="file"
         :size="16"
       />
-      Протокол
+      Статистика
     </NuxtLink>
   </article>
 </template>

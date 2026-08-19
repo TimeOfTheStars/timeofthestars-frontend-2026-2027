@@ -18,24 +18,45 @@ const VIDEO_HOSTS: Record<string, (u: URL) => string | null> = {
   'youtube.com': u => u.searchParams.get('v') ?? embedId(u),
   'm.youtube.com': u => u.searchParams.get('v'),
   'rutube.ru': u => u.pathname.match(/\/video\/([\w-]+)/)?.[1] ?? null,
-  'vkvideo.ru': () => null,
-  'vk.com': () => null,
+  // У VK идентификатор составной: владелец и видео. Возвращаем «oid_id»,
+  // а на пару разбираем уже при сборке ссылки на плеер.
+  'vkvideo.ru': vkId,
+  'vk.ru': vkId,
+  'vk.com': vkId,
+  'm.vk.com': vkId,
 }
 
 function embedId(u: URL): string | null {
   return u.pathname.match(/\/(?:embed|shorts|live)\/([\w-]+)/)?.[1] ?? null
 }
 
+/**
+ * Идентификатор видео VK как «oid_id», где oid у сообществ отрицательный.
+ *
+ * Встречается тремя способами: в пути (`/video-1_2`), у трансляций с иным
+ * префиксом (`/live-1_2`, `/clip-1_2`) и параметром `?z=video-1_2`.
+ * Боевая ссылка лиги — как раз `live-`, поэтому префикс обязан быть шире,
+ * чем просто `video`.
+ */
+const VK_ID = /(?:video|live|clip)(-?\d+)_(\d+)/
+
+function vkId(u: URL): string | null {
+  const m = VK_ID.exec(u.pathname) ?? VK_ID.exec(u.searchParams.get('z') ?? '')
+  return m ? `${m[1]}_${m[2]}` : null
+}
+
 export interface VideoRef {
-  kind: 'youtube' | 'rutube' | 'link'
+  kind: 'youtube' | 'rutube' | 'vk' | 'link'
   /** URL для <iframe>, если встраивание поддержано */
   embed: string | null
   href: string
 }
 
 /**
- * Разбирает video_url. Встраиваем только по белому списку и только по клику —
- * автозагрузка плеера на wi-fi катка недопустима.
+ * Разбирает video_url. Встраиваем только по белому списку и только когда
+ * пользователь сам попросил: плеер монтируется на своей вкладке, а не грузится
+ * вместе со страницей — автозагрузка на wi-fi катка недопустима.
+ * По той же причине в ссылку на плеер не добавляется autoplay.
  */
 export function parseVideo(url: string | null | undefined): VideoRef | null {
   if (!url) return null
@@ -55,10 +76,17 @@ export function parseVideo(url: string | null | undefined): VideoRef | null {
   if (id && u.hostname.includes('rutube')) {
     return { kind: 'rutube', embed: `https://rutube.ru/play/embed/${id}`, href: url }
   }
+  if (id && u.hostname.includes('vk')) {
+    const [oid, videoId] = id.split('_')
+    return {
+      kind: 'vk',
+      embed: `https://vk.ru/video_ext.php?oid=${oid}&id=${videoId}`,
+      href: url,
+    }
+  }
   return { kind: 'link', embed: null, href: url }
 }
 
-/** Скан протокола: PDF или картинка — от этого зависит способ показа. */
 /**
  * Ссылка на момент в записи матча.
  *
@@ -81,6 +109,7 @@ export function videoAt(videoUrl: string | null | undefined, seconds: number | n
   return `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}t=${t}`
 }
 
+/** Скан протокола: PDF или картинка — от этого зависит способ показа. */
 export function isPdf(path: string | null | undefined): boolean {
   return !!path && /\.pdf($|\?)/i.test(path)
 }

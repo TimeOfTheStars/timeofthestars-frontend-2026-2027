@@ -3,17 +3,23 @@ import type { CompetitionPlayerWithStats, GameWithProtocol } from '#shared/types
 import { ep } from '#shared/utils/endpoints'
 
 /**
- * Страница матча: счёт + протокол по сторонам.
+ * Страница матча: счёт в шапке, остальное — разделами.
  *
- * Обе стороны идут СТОПКОЙ, а не табами. Табы проигрывают: главный вопрос
- * страницы — «кто забил» — охватывает обе команды, и родитель с вероятностью
- * 50% попадает не на ту вкладку без подсказки, что нужное имя в одном тапе;
- * поиск по странице в мобильном браузере (реальный способ найти фамилию)
- * на скрытой панели не работает; а объёма, который оправдывал бы табы, тут нет —
- * любительский протокол это 5–20 строк, часто пустой.
+ * Разделы ссылками через ?tab=, как везде в проекте (SegmentLinks): они
+ * шарятся в мессенджер, индексируются, работают без JS и корректно ходят
+ * по «назад».
  *
- * Ориентацию даёт липкая полоса счёта с якорями — она работает как таб-бар,
- * только контент, на который она указывает, уже на странице.
+ * А вот СТОРОНЫ протокола внутри «Статистики» по-прежнему идут стопкой, и
+ * это не непоследовательность. Разделы отвечают на разные вопросы («как шла
+ * игра» / «кто сколько набрал» / «что на бумаге» / «посмотреть»), а стороны —
+ * на один и тот же: «кто забил». Разложи их по вкладкам — и родитель с
+ * вероятностью 50% попадёт не на ту, без подсказки, что нужная фамилия в
+ * одном тапе; плюс поиск по странице в мобильном браузере, реальный способ
+ * найти фамилию, на скрытой панели не работает. Объёма, оправдывающего
+ * разделение, тут тоже нет: любительский протокол — 5–20 строк.
+ *
+ * Ориентацию по сторонам даёт липкая полоса счёта с якорями; она нужна
+ * только на вкладке статистики и только там показывается.
  */
 const route = useRoute()
 
@@ -65,6 +71,29 @@ const teamAName = computed(() => team(game.value?.team_a_id ?? null)?.name ?? ''
 const teamBName = computed(() => team(game.value?.team_b_id ?? null)?.name ?? '')
 
 const showStrip = computed(() => !!protocol.value && !protocol.value.isEmpty)
+
+const segments = computed(() => [
+  { key: 'timeline', label: 'Хронология', count: game.value?.events.length || null },
+  { key: 'stats', label: 'Статистика', count: game.value?.player_stats.length || null },
+  { key: 'scan', label: 'Скан протокола' },
+  { key: 'video', label: 'Видео' },
+])
+
+// Неизвестный ?tab= — не ошибка, а чужая или устаревшая ссылка: тихо
+// открываем раздел по умолчанию, а не 404.
+const tab = computed(() => {
+  const t = String(route.query.tab ?? '')
+  return segments.value.some(s => s.key === t) ? t : 'timeline'
+})
+
+const sectionTitle = computed(() => {
+  if (tab.value === 'stats') return 'Статистика команд'
+  if (tab.value === 'scan') return 'Скан протокола'
+  // Подпись зависит от статуса: у несыгранного матча ссылка может вести
+  // только на будущую трансляцию, у сыгранного — только на запись.
+  if (tab.value === 'video') return game.value?.status === 'scheduled' ? 'Трансляция' : 'Видеозапись матча'
+  return 'Хронология матча'
+})
 
 useHead(() => ({
   title: game.value
@@ -238,64 +267,6 @@ useHead(() => ({
           </dl>
         </header>
 
-        <!--
-          Скан протокола и видео — рядом, одной строкой. Каждая кнопка
-          появляется только при своём заполненном поле (`scan` / `video_url`):
-          в живой базе они пустые чаще, чем заполнены, и «пустая» кнопка вела
-          бы в никуда.
-        -->
-        <div
-          v-if="scanUrl || video"
-          class="mt-4 flex flex-wrap gap-2"
-        >
-          <a
-            v-if="scanUrl"
-            :href="scanUrl"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-rule px-3.5 text-sm font-semibold"
-          >
-            <AppIcon
-              name="file"
-              :size="16"
-            />
-            {{ isPdf(game.scan) ? 'Протокол (PDF)' : 'Скан протокола' }}
-            <AppIcon
-              name="external"
-              :size="14"
-              class="text-muted"
-            />
-          </a>
-
-          <a
-            v-if="video"
-            :href="video.href"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-rule px-3.5 text-sm font-semibold"
-          >
-            <AppIcon
-              name="play"
-              :size="16"
-            />
-            <!--
-              Подпись зависит от статуса, и это не косметика. У несыгранного
-              матча ссылка может вести только на будущую трансляцию, у
-              сыгранного — только на запись. Одно слово «Видео матча» на
-              запланированном матче обещало бы то, чего ещё нет, а «Трансляция»
-              на сыгранном — то, что уже кончилось.
-            -->
-            <!-- «Видео», а не «Видео матча»: на 375px пара кнопок с длинной
-                 подписью не влезала в строку и уезжала переносом, хотя не
-                 хватало 16px. На странице матча слово «матча» и так лишнее. -->
-            {{ game.status === 'scheduled' ? 'Трансляция' : 'Видео' }}
-            <AppIcon
-              name="external"
-              :size="14"
-              class="text-muted"
-            />
-          </a>
-        </div>
       </template>
       <LoadError
         v-else-if="error"
@@ -304,38 +275,25 @@ useHead(() => ({
       />
     </div>
 
-    <!-- Хронология идёт ПЕРЕД протоколом: она интереснее таблицы очков.
-         Липкая полоса с якорями при этом остаётся вплотную к протоколу —
-         ради навигации по нему она и сделана. -->
+    <!-- Таб-бар. Не липкий — как на странице соревнования: липкой здесь
+         остаётся только полоса счёта, и две липкие полосы подряд съели бы
+         пол-экрана телефона. -->
     <div
-      v-if="game && timeline"
-      class="container-page py-5"
+      v-if="game"
+      class="container-page"
     >
-      <h2
-        id="timeline"
-        class="mb-4 scroll-mt-28 text-lg font-bold"
-      >
-        Хронология матча
-      </h2>
-
-      <EmptyState
-        v-if="timeline.isEmpty"
-        icon="clock"
-        title="Хронология матча не заполнена"
-        hint="Голы и удаления вносят отдельно от протокола, поэтому у сыгранного матча её может не быть."
-      />
-      <GameTimeline
-        v-else
-        :timeline="timeline"
-        :game="game"
+      <SegmentLinks
+        :items="segments"
+        :current="tab"
+        class="mb-5"
       />
     </div>
 
-    <!-- Липкая полоса счёта = таб-бар, только контент уже на странице.
-         Ноль JS, никакого role="tablist" с блуждающим tabindex. -->
+    <!-- Полоса счёта ведёт к якорям #side-a / #side-b внутри протокола,
+         поэтому вне вкладки статистики она указывала бы в пустоту. -->
     <div
-      v-if="game && showStrip"
-      class="sticky top-header z-20 border-y border-rule bg-bg"
+      v-if="game && showStrip && tab === 'stats'"
+      class="sticky top-header z-20 mb-5 border-y border-rule bg-bg"
     >
       <div class="container-page flex h-12 items-center gap-2 text-sm">
         <a
@@ -357,74 +315,188 @@ useHead(() => ({
     </div>
 
     <div
-      v-if="game && protocol"
-      class="container-page py-5"
+      v-if="game"
+      class="container-page pb-5"
     >
-      <!-- Якорь для кнопки «Протокол» в карточках матчей -->
-      <h2
-        id="protocol"
-        class="mb-4 scroll-mt-28 text-lg font-bold"
-      >
-        Протокол матча
+      <h2 class="mb-4 text-lg font-bold">
+        {{ sectionTitle }}
       </h2>
 
-      <!-- Протокол бывает пустым даже у сыгранного матча со счётом -->
-      <EmptyState
-        v-if="protocol.isEmpty"
-        icon="file"
-        title="Протокол матча не опубликован"
-        :hint="outcome?.played
-          ? 'Счёт внесён, а состав по игрокам — ещё нет.'
-          : 'Появится после матча.'"
-      />
+      <!-- Хронология -->
+      <section v-if="tab === 'timeline'">
+        <EmptyState
+          v-if="!timeline || timeline.isEmpty"
+          icon="clock"
+          title="Хронология матча не заполнена"
+          hint="Голы и удаления вносят отдельно от протокола, поэтому у сыгранного матча её может не быть."
+        />
+        <GameTimeline
+          v-else
+          :timeline="timeline"
+          :game="game"
+        />
+      </section>
 
-      <template v-else>
-        <div class="space-y-8">
-          <BoxScoreSection
-            :side="protocol.a"
-            anchor="side-a"
-            :numbers="numbers"
-          />
-          <BoxScoreSection
-            :side="protocol.b"
-            anchor="side-b"
-            :numbers="numbers"
-          />
+      <!-- Статистика команд -->
+      <section v-else-if="tab === 'stats'">
+        <!-- Протокол бывает пустым даже у сыгранного матча со счётом -->
+        <EmptyState
+          v-if="!protocol || protocol.isEmpty"
+          icon="file"
+          title="Протокол матча не опубликован"
+          :hint="outcome?.played
+            ? 'Счёт внесён, а состав по игрокам — ещё нет.'
+            : 'Появится после матча.'"
+        />
+
+        <template v-else>
+          <div class="space-y-8">
+            <BoxScoreSection
+              :side="protocol.a"
+              anchor="side-a"
+              :numbers="numbers"
+            />
+            <BoxScoreSection
+              :side="protocol.b"
+              anchor="side-b"
+              :numbers="numbers"
+            />
+          </div>
+
+          <!-- Строки, чья команда не совпала ни с одной из сторон матча.
+               Молча выбросить их нельзя: протокол разошёлся бы с шапкой счёта. -->
+          <section
+            v-if="protocol.orphans.length"
+            class="mt-8"
+          >
+            <h3 class="mb-2 text-sm font-bold">
+              Прочие строки протокола
+            </h3>
+            <p class="mb-3 text-xs text-muted">
+              У этих строк указана команда, не участвующая в матче. Так бывает, если
+              игрока перевели в другую команду после внесения протокола.
+            </p>
+            <ul class="space-y-1.5">
+              <li
+                v-for="(line, i) in protocol.orphans"
+                :key="lineKey(line, i)"
+                class="flex items-center gap-2 rounded-lg border border-rule bg-surface px-3 py-2 text-sm"
+              >
+                <span
+                  class="min-w-0 flex-1 truncate"
+                  :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
+                >{{ lineName(line).text }}</span>
+                <span class="shrink-0 text-xs text-muted">
+                  {{ team(line.team_id)?.name ?? `команда №${line.team_id}` }}
+                </span>
+                <span class="shrink-0 font-bold tabular-nums">
+                  {{ line.goals }}+{{ line.assists }}
+                </span>
+              </li>
+            </ul>
+          </section>
+        </template>
+      </section>
+
+      <!-- Скан бумажного протокола -->
+      <section v-else-if="tab === 'scan'">
+        <EmptyState
+          v-if="!scanUrl"
+          icon="file"
+          title="Скан протокола не загружен"
+          hint="Бумажный протокол выкладывают после матча, и не для каждой игры."
+        />
+
+        <template v-else>
+          <div class="overflow-hidden rounded-xl border border-rule bg-surface-2">
+            <iframe
+              v-if="isPdf(game.scan)"
+              :src="scanUrl"
+              title="Скан протокола матча"
+              class="h-[80vh] w-full border-0"
+            />
+            <img
+              v-else
+              :src="scanUrl"
+              alt="Скан протокола матча"
+              loading="lazy"
+              class="mx-auto block max-h-[80vh] w-auto max-w-full"
+            >
+          </div>
+
+          <!--
+            Атрибут download браузеры для межсайтовых ссылок игнорируют, а скан
+            лежит на домене API. Значит файл откроется в новой вкладке, и уже
+            оттуда его сохраняют. Принудительное скачивание — это заголовок
+            Content-Disposition со стороны бэкенда, здесь его не подделать.
+          -->
+          <a
+            :href="scanUrl"
+            download
+            target="_blank"
+            rel="noopener"
+            class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
+          >
+            <AppIcon
+              name="file"
+              :size="16"
+            />
+            Скачать
+            <AppIcon
+              name="external"
+              :size="14"
+              class="text-muted"
+            />
+          </a>
+        </template>
+      </section>
+
+      <!-- Видео -->
+      <section v-else-if="tab === 'video'">
+        <EmptyState
+          v-if="!video"
+          icon="play"
+          :title="game.status === 'scheduled' ? 'Трансляция не назначена' : 'Видеозапись не привязана'"
+          hint="Ссылку на видео добавляют вручную, и не у каждого матча она есть."
+        />
+
+        <!-- Плеер монтируется только на своей вкладке: на остальных разделах
+             iframe в разметку не попадает и трафик не тратит. -->
+        <div
+          v-else-if="video.embed"
+          class="mx-auto w-full max-w-4xl"
+        >
+          <div class="aspect-video w-full overflow-hidden rounded-xl bg-black">
+            <iframe
+              :src="video.embed"
+              :title="sectionTitle"
+              class="h-full w-full border-0"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock"
+              allowfullscreen
+            />
+          </div>
         </div>
 
-        <!-- Строки, чья команда не совпала ни с одной из сторон матча.
-             Молча выбросить их нельзя: протокол разошёлся бы с шапкой счёта. -->
-        <section
-          v-if="protocol.orphans.length"
-          class="mt-8"
+        <!-- Хост не из белого списка — встроить нельзя, отдаём ссылкой -->
+        <a
+          v-else
+          :href="video.href"
+          target="_blank"
+          rel="noopener"
+          class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
         >
-          <h3 class="mb-2 text-sm font-bold">
-            Прочие строки протокола
-          </h3>
-          <p class="mb-3 text-xs text-muted">
-            У этих строк указана команда, не участвующая в матче. Так бывает, если
-            игрока перевели в другую команду после внесения протокола.
-          </p>
-          <ul class="space-y-1.5">
-            <li
-              v-for="(line, i) in protocol.orphans"
-              :key="lineKey(line, i)"
-              class="flex items-center gap-2 rounded-lg border border-rule bg-surface px-3 py-2 text-sm"
-            >
-              <span
-                class="min-w-0 flex-1 truncate"
-                :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
-              >{{ lineName(line).text }}</span>
-              <span class="shrink-0 text-xs text-muted">
-                {{ team(line.team_id)?.name ?? `команда №${line.team_id}` }}
-              </span>
-              <span class="shrink-0 font-bold tabular-nums">
-                {{ line.goals }}+{{ line.assists }}
-              </span>
-            </li>
-          </ul>
-        </section>
-      </template>
+          <AppIcon
+            name="play"
+            :size="16"
+          />
+          Смотреть на сайте видео
+          <AppIcon
+            name="external"
+            :size="14"
+            class="text-muted"
+          />
+        </a>
+      </section>
     </div>
   </div>
 </template>
