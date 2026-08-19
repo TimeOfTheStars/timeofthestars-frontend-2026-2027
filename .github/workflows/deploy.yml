@@ -69,6 +69,20 @@ jobs:
       name: production
       url: https://timeofthestars.ru
     steps:
+      - uses: actions/checkout@v4
+
+      # Caddyfile и docker-compose.yml раньше правились на сервере руками,
+      # из-за чего прод мог разъехаться с репозиторием. Теперь репозиторий —
+      # источник правды и для них.
+      - name: Синхронизировать конфиги прода
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docker-compose.yml,Caddyfile"
+          target: /srv/timeofthestars
+
       - name: docker compose pull && up
         uses: appleboy/ssh-action@v1
         with:
@@ -88,6 +102,9 @@ jobs:
             # --wait: если новый контейнер не станет healthy, деплой упадёт
             # с ошибкой, а не оставит нас с молча сломанным сайтом.
             docker compose up -d --wait --wait-timeout 120
+            # up не перезапускает Caddy при правке только Caddyfile —
+            # он смонтирован томом, а не зашит в образ. Перечитываем явно.
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
             docker image prune -f
             # токен временный, но и его на диске не оставляем
             docker logout ghcr.io

@@ -19,6 +19,14 @@ timeofthestars.ru {
 	@immutable path /_nuxt/*
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
 
+	# Nitro при cache.swr=false отдаёт HTML с max-age=15, и браузер начинает
+	# кешировать страницу поверх серверного кеша — задержки складываются.
+	# Заставляем браузер перепроверять страницы: серверный кеш и так
+	# ограничивает нагрузку, а свежесть тогда ровно та, что задана в
+	# nuxt.config.ts, без удвоения.
+	@pages not path /_nuxt/* /fonts/* /sitemap.xml /robots.txt *.png *.jpg *.jpeg *.svg *.ico *.webp *.avif *.woff2
+	header @pages Cache-Control "no-cache"
+
 	# app/pages/dev/sandbox.vue попадает в прод-сборку — наружу не отдаём
 	respond /dev/* 404
 
