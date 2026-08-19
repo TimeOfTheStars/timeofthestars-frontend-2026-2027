@@ -10,7 +10,7 @@ const winner = computed(() => team(props.competition.winner_team_id))
 <template>
   <NuxtLink
     :to="competitionPath(competition)"
-    class="flex gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
+    class="reveal flex gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
   >
     <!-- Логотипа у соревнования почти всегда нет — подставляем марку лиги -->
     <CompetitionLogo

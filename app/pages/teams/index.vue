@@ -64,7 +64,7 @@ useSeoMeta({
         >
           <NuxtLink
             :to="teamPath(t)"
-            class="flex items-center gap-3 rounded-xl border bg-surface p-3 transition-colors"
+            class="reveal flex items-center gap-3 rounded-xl border bg-surface p-3 transition-colors"
             :class="t.id === myTeamId ? 'border-accent' : 'border-rule hover:border-rule-strong'"
           >
             <TeamCrest

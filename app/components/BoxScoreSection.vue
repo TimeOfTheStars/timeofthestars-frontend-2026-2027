@@ -32,7 +32,7 @@ const hasGoalies = computed(() => props.side.goalies.length > 0)
   <section
     :id="anchor"
     tabindex="-1"
-    class="scroll-mt-28"
+    class="reveal scroll-mt-28"
   >
     <h3 class="mb-2 flex items-center gap-2">
       <TeamName

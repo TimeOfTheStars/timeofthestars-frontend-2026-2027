@@ -247,6 +247,48 @@
     }
   }
 
+  /*
+    Появление при прокрутке.
+
+    Сделано на scroll-driven анимациях, без JS. Дело не в экономии скрипта:
+    при подходе «IntersectionObserver вешает класс» контент стартует
+    невидимым, и если скрипт не выполнился, страница остаётся пустой. Здесь
+    такого случиться не может по построению.
+
+    Начальные opacity и сдвиг живут ВНУТРИ @supports намеренно. Браузер без
+    поддержки animation-timeline просто покажет элемент как обычно — а если
+    записать наоборот, он спрячет его навсегда.
+
+    prefers-reduced-motion гасим здесь отдельно, хотя в @layer base уже есть
+    глобальное правило: оно режет animation-duration, а scroll-driven
+    анимация длительность не использует вовсе — её прогресс задаёт прокрутка.
+    До этих правил глобальное не достаёт.
+
+    Диапазон заканчивается на entry 70%: если тянуть до конца входа, элемент
+    доезжает до полной непрозрачности уже под пальцем и выглядит тормозящим.
+  */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: reveal-in linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 70%;
+      }
+    }
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   /* Полоса прокрутки у карусели скрыта, сама прокрутка остаётся */
   .no-scrollbar {
     scrollbar-width: none;

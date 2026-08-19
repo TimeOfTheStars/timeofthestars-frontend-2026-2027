@@ -70,7 +70,10 @@ function goalEdge(event: TimelineEvent) {
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-2xl border border-rule bg-surface">
+  <!-- Без overflow-hidden намеренно: он создаёт scroll-контейнер, и
+       появление строк при прокрутке резолвилось бы против самой секции,
+       а не против страницы. Скругление низа возвращает класс на подвале. -->
+  <section class="rounded-2xl border border-rule bg-surface">
     <!-- Шапка: чьи события в какой колонке. Без неё две колонки не читаются. -->
     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-rule px-4 py-3">
       <div class="flex min-w-0 items-center justify-end gap-2">
@@ -112,7 +115,7 @@ function goalEdge(event: TimelineEvent) {
         v-for="period in timeline.periods"
         :key="period.period ?? 'none'"
       >
-        <h3 class="relative py-3 text-center">
+        <h3 class="reveal relative py-3 text-center">
           <span
             class="inline-block rounded-full border border-rule bg-surface px-3 py-1 text-[11px] font-bold tracking-wider text-muted uppercase"
           >
@@ -124,7 +127,7 @@ function goalEdge(event: TimelineEvent) {
           <li
             v-for="event in period.events"
             :key="event.id"
-            class="relative grid grid-cols-[1fr_auto_1fr] items-center gap-1 py-1.5 sm:gap-2"
+            class="reveal relative grid grid-cols-[1fr_auto_1fr] items-center gap-1 py-1.5 sm:gap-2"
           >
             <div
               class="flex min-w-0 items-center gap-2"
@@ -226,7 +229,7 @@ function goalEdge(event: TimelineEvent) {
       <!-- Серия буллитов. В счёт матча не входит: сумма голов по команде должна
            сходиться со score_team_*, а победа берётся из bullet_win_team_id. -->
       <template v-if="timeline.shootout.length">
-        <h3 class="relative py-3 text-center">
+        <h3 class="reveal relative py-3 text-center">
           <span
             class="inline-block rounded-full border border-rule bg-surface px-3 py-1 text-[11px] font-bold tracking-wider text-muted uppercase"
           >
@@ -238,7 +241,7 @@ function goalEdge(event: TimelineEvent) {
           <li
             v-for="event in timeline.shootout"
             :key="event.id"
-            class="relative grid grid-cols-[1fr_auto_1fr] items-center gap-1 py-1.5 sm:gap-2"
+            class="reveal relative grid grid-cols-[1fr_auto_1fr] items-center gap-1 py-1.5 sm:gap-2"
           >
             <div
               class="flex min-w-0 items-center gap-2"
@@ -275,7 +278,7 @@ function goalEdge(event: TimelineEvent) {
 
     <p
       v-if="timeline.shootout.length && shootoutWinner"
-      class="border-t border-rule bg-surface-2 px-4 py-2.5 text-center text-xs text-muted"
+      class="rounded-b-2xl border-t border-rule bg-surface-2 px-4 py-2.5 text-center text-xs text-muted"
     >
       Победа по буллитам — <span class="font-semibold text-fg">{{ shootoutWinner.name }}</span>.
       В счёт матча буллиты не входят.

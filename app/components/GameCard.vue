@@ -34,7 +34,7 @@ const sides = computed(() => [
 </script>
 
 <template>
-  <article class="overflow-hidden rounded-xl border border-rule bg-surface transition-colors hover:border-rule-strong">
+  <article class="reveal overflow-hidden rounded-xl border border-rule bg-surface transition-colors hover:border-rule-strong">
     <NuxtLink
       :to="gamePath(game.id)"
       class="block p-3"

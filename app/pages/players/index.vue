@@ -65,7 +65,7 @@ useSeoMeta({
         >
           <NuxtLink
             :to="playerPath(p)"
-            class="flex items-center gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
+            class="reveal flex items-center gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
           >
             <PlayerAvatar
               :player="p"
