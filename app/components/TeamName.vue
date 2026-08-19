@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { Team } from '#shared/types/api'
+// Именно объект компонента, а не строка 'NuxtLink': автоимпорт Nuxt
+// работает по статическим тегам в шаблоне и динамическое имя не видит —
+// строка отрендерилась бы литеральным тегом <NuxtLink>, а не ссылкой.
+import { NuxtLink } from '#components'
 
 /**
  * Герб + название команды. Основной способ показать команду где угодно.
@@ -30,7 +34,7 @@ const href = computed(() => (resolved.value ? teamPath(resolved.value) : null))
 
 <template>
   <component
-    :is="link && href ? 'NuxtLink' : 'span'"
+    :is="link && href ? NuxtLink : 'span'"
     :to="link && href ? href : undefined"
     class="flex min-w-0 items-center gap-2"
   >

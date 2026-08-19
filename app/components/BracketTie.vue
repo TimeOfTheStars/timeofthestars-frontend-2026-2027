@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { Tie } from '~/utils/bracket'
+// Именно объект компонента, а не строка 'NuxtLink': автоимпорт Nuxt
+// работает по статическим тегам в шаблоне и динамическое имя не видит —
+// строка отрендерилась бы литеральным тегом <NuxtLink>, а не ссылкой.
+import { NuxtLink } from '#components'
 
 const props = defineProps<{ tie: Tie }>()
 
@@ -36,7 +40,7 @@ const singleOutcome = computed(() => (single.value ? gameOutcome(single.value) :
 <template>
   <div class="bk-node rounded-xl border border-rule bg-surface">
     <component
-      :is="single ? 'NuxtLink' : 'div'"
+      :is="single ? NuxtLink : 'div'"
       :to="single ? gamePath(single.id) : undefined"
       class="block p-3"
     >

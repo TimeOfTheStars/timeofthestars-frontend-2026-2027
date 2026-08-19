@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { ProtocolSide } from '~/utils/protocol'
+// Именно объект компонента, а не строка 'NuxtLink': автоимпорт Nuxt
+// работает по статическим тегам в шаблоне и динамическое имя не видит —
+// строка отрендерилась бы литеральным тегом <NuxtLink>, а не ссылкой.
+import { NuxtLink } from '#components'
 
 /**
  * Протокол одной стороны: основная таблица + вратарская.
@@ -105,7 +109,7 @@ const hasGoalies = computed(() => props.side.goalies.length > 0)
               class="border-b border-rule py-1.5 pl-4 text-left font-normal"
             >
               <component
-                :is="line.player ? 'NuxtLink' : 'span'"
+                :is="line.player ? NuxtLink : 'span'"
                 :to="line.player ? playerPath(line.player) : undefined"
                 class="flex min-h-11 items-center gap-1.5"
               >
