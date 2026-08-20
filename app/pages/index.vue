@@ -169,6 +169,26 @@ useSeoMeta({
           </div>
         </section>
 
+        <!--
+          Матчи идут выше таблицы и сетки: на главную заходят посмотреть счёт
+          и когда следующая игра, а не изучать распределение мест.
+
+          Одна лента вместо двух списков «ближайшие» / «последние»: она
+          открывается на «сейчас» — на последнем сыгранном матче, — так свежий
+          результат и следующая игра оказываются рядом, в одном движении
+          большого пальца. Заголовок и стрелки рисует сама карусель.
+        -->
+        <section
+          v-if="data?.featured"
+          class="mb-8"
+        >
+          <GameCarousel
+            :games="data.featuredGames"
+            :title="data.featured.name"
+            :more-to="competitionPath(data.featured)"
+          />
+        </section>
+
         <!-- Блок из админки: таблица выбранного соревнования -->
         <section
           v-if="data?.standings?.length"
@@ -223,22 +243,7 @@ useSeoMeta({
           />
         </section>
 
-        <!-- Контент по умолчанию: самое свежее соревнование -->
         <template v-if="data?.featured">
-          <!--
-            Одна лента вместо двух списков «ближайшие» / «последние»:
-            она открывается на «сейчас» — на последнем сыгранном матче, — так
-            свежий результат и следующая игра оказываются рядом, в одном
-            движении большого пальца. Заголовок и стрелки рисует сама карусель.
-          -->
-          <section class="mb-8">
-            <GameCarousel
-              :games="data.featuredGames"
-              :title="data.featured.name"
-              :more-to="competitionPath(data.featured)"
-            />
-          </section>
-
           <NuxtLink
             to="/competitions"
             class="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-rule bg-surface font-semibold"
