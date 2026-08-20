@@ -34,7 +34,13 @@ const sides = computed(() => [
 </script>
 
 <template>
-  <article class="reveal overflow-hidden rounded-xl border border-rule bg-surface transition-colors hover:border-rule-strong">
+  <!--
+    flex-col + mt-auto на кнопке: в карусели карточки растягиваются на общую
+    высоту (h-full приходит извне), и у незавершённого матча, где контента
+    меньше, кнопка повисала посреди карточки, а под ней зияла пустота.
+    В обычных списках карточка не растягивается, и колонка ведёт себя как блок.
+  -->
+  <article class="reveal flex flex-col overflow-hidden rounded-xl border border-rule bg-surface transition-colors hover:border-rule-strong">
     <NuxtLink
       :to="gamePath(game.id)"
       class="block p-3"
@@ -178,7 +184,7 @@ const sides = computed(() => [
     -->
     <NuxtLink
       :to="{ path: gamePath(game.id), query: { tab: 'stats' } }"
-      class="flex min-h-11 items-center justify-center gap-2 border-t border-rule text-sm font-semibold text-accent"
+      class="mt-auto flex min-h-11 items-center justify-center gap-2 border-t border-rule text-sm font-semibold text-accent"
     >
       <AppIcon
         name="file"
