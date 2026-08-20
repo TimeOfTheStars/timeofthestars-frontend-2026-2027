@@ -7,12 +7,14 @@ const year = new Date().getFullYear()
     <div class="container-page py-8">
       <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex items-start gap-3">
+          <!-- Широкий файл: квадратные PNG растянуты по вертикали.
+               Пропорция 428:309, при высоте 44 ширина 61. -->
           <img
-            src="/brand/logo-vremya-zvezd-128.png"
+            src="/brand/logo-vremya-zvezd-wide.webp"
             alt=""
-            width="44"
+            width="61"
             height="44"
-            class="size-11 shrink-0"
+            class="h-11 w-auto shrink-0"
           >
           <div>
             <p class="text-sm font-extrabold tracking-tight">

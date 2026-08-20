@@ -13,12 +13,17 @@ const { theme, toggle } = useColorTheme()
         class="flex min-h-11 min-w-0 items-center gap-2.5"
         aria-label="Время звёзд — на главную"
       >
+        <!--
+          Широкий файл, а не квадратный: квадратные PNG (128/192/512) — это
+          тот же логотип, растянутый по вертикали до 1:1, проверено сравнением
+          с оригиналом. Пропорция 428:309, поэтому при высоте 36 ширина 50.
+        -->
         <img
-          src="/brand/logo-vremya-zvezd-128.png"
+          src="/brand/logo-vremya-zvezd-wide.webp"
           alt=""
-          width="36"
+          width="50"
           height="36"
-          class="size-9 shrink-0"
+          class="h-9 w-auto shrink-0"
         >
         <span class="min-w-0 leading-none">
           <span class="block truncate text-[15px] font-extrabold tracking-tight">
