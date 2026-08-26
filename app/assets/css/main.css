@@ -214,6 +214,87 @@
     }
   }
 
+  /*
+    Лист фильтров: появление и закрытие.
+
+    Нативный <dialog> переключается через display, а его обычным transition не
+    анимировать. Поэтому display и overlay стоят в списке переходов с
+    allow-discrete: переключаются они по-прежнему скачком, но уже ПОСЛЕ
+    анимации — иначе закрытие обрывалось бы на первом кадре.
+
+    @starting-style задаёт кадр, с которого начинается открытие: без него
+    браузеру не от чего анимировать только что показанный элемент.
+
+    Отдельного правила под prefers-reduced-motion здесь НЕ нужно, в отличие от
+    появления блоков при прокрутке: это обычные transition, и глобальное
+    правило в @layer base гасит их само.
+
+    На телефоне лист выезжает снизу, с sm — окно по центру, поэтому и
+    позиционирование живёт здесь: инлайновый margin не перебить медиазапросом.
+  */
+  .sheet {
+    margin: auto auto 0;
+    max-height: 85dvh;
+    opacity: 0;
+    translate: 0 100%;
+    transition:
+      opacity 200ms ease-out,
+      translate 200ms ease-out,
+      scale 200ms ease-out,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+
+  .sheet[open] {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .sheet[open] {
+      opacity: 0;
+      translate: 0 100%;
+    }
+  }
+
+  .sheet::backdrop {
+    opacity: 0;
+    transition:
+      opacity 200ms ease-out,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+
+  .sheet[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .sheet[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .sheet {
+      margin: auto;
+      translate: 0 8px;
+      scale: 0.97;
+    }
+
+    .sheet[open] {
+      translate: 0 0;
+      scale: 1;
+    }
+
+    @starting-style {
+      .sheet[open] {
+        translate: 0 8px;
+        scale: 0.97;
+      }
+    }
+  }
+
   /* Полоса прокрутки у карусели скрыта, сама прокрутка остаётся */
   .no-scrollbar {
     scrollbar-width: none;

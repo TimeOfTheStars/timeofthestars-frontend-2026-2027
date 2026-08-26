@@ -78,14 +78,14 @@ function reset() {
     </button>
 
     <!--
-      Позиционирование задаём сами: у dialog по умолчанию margin:auto, и на
-      телефоне он повис бы по центру экрана. Ниже sm это лист снизу, с sm —
-      обычное окно по центру.
+      Позиционирование и появление — в классе .sheet (main.css): нужны
+      ::backdrop, @starting-style и transition с allow-discrete, а этого
+      утилитами не выразить. Инлайновым стилем тоже нельзя — его не перебить
+      медиазапросом, а лист снизу нужен только до sm.
     -->
     <dialog
       ref="dialog"
-      class="w-full max-w-lg rounded-t-2xl border border-rule bg-surface p-0 text-fg backdrop:bg-black/50 sm:rounded-2xl"
-      style="margin: auto auto 0; max-height: 85dvh"
+      class="sheet w-full max-w-lg rounded-t-2xl border border-rule bg-surface p-0 text-fg backdrop:bg-black/50 sm:rounded-2xl"
       aria-label="Фильтры матчей"
       @click.self="close"
     >
