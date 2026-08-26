@@ -11,6 +11,12 @@ const props = withDefaults(
     showStage?: boolean
     emptyTitle?: string
     emptyHint?: string
+    /**
+     * Ярлык соревнования на карточке. Функцией, а не строкой: в календаре
+     * список смешанный, и у каждого матча ярлык свой. Названия в Game нет,
+     * поэтому его достаёт вызывающая сторона из справочника соревнований.
+     */
+    competitionName?: (game: Game) => string | null
   }>(),
   { showStage: false, emptyTitle: 'Матчей пока нет' },
 )
@@ -40,6 +46,7 @@ const groups = computed(() => groupGamesByDate(props.games))
           <GameCard
             :game="game"
             :show-stage="showStage"
+            :competition-name="competitionName?.(game) ?? null"
           />
         </li>
       </ul>

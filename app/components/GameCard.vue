@@ -19,6 +19,12 @@ const props = withDefaults(
   defineProps<{
     game: Game
     showStage?: boolean
+    /**
+     * Название соревнования. Нужно только в календаре, где соревнования
+     * смешаны: без ярлыка непонятно, из какого турнира матч. В Game этого
+     * поля нет, поэтому название приходит снаружи.
+     */
+    competitionName?: string | null
   }>(),
   { showStage: false },
 )
@@ -74,6 +80,13 @@ const sides = computed(() => [
           :variant="game.status === 'finished' ? 'accent' : 'neutral'"
         >
           {{ STATUS_LABEL[game.status] }}
+        </AppChip>
+        <AppChip
+          v-if="competitionName"
+          size="sm"
+          variant="outline"
+        >
+          {{ competitionName }}
         </AppChip>
         <AppChip
           v-if="showStage && game.stage !== 'matches'"
