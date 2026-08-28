@@ -74,10 +74,22 @@ const showStrip = computed(() => !!protocol.value && !protocol.value.isEmpty)
 
 const segments = computed(() => [
   { key: 'timeline', label: 'Хронология', count: game.value?.events.length || null },
-  { key: 'stats', label: 'Статистика', count: game.value?.player_stats.length || null },
+  { key: 'teamstats', label: 'Статистика матча' },
+  { key: 'stats', label: 'Статистика игроков', count: game.value?.player_stats.length || null },
   { key: 'scan', label: 'Скан протокола' },
   { key: 'video', label: 'Видео' },
 ])
+
+/**
+ * Сторона протокола на вкладке игроков. В адресе, а не в локальном ref: у
+ * разделов проекта состояние живёт в query, чтобы ссылка делилась и «назад»
+ * возвращал куда ушёл. Мусор молча даёт хозяев.
+ */
+const side = computed<'a' | 'b'>(() => (route.query.side === 'b' ? 'b' : 'a'))
+
+function sideLink(next: 'a' | 'b') {
+  return { path: route.path, query: { ...route.query, side: next } }
+}
 
 // Неизвестный ?tab= — не ошибка, а чужая или устаревшая ссылка: тихо
 // открываем раздел по умолчанию, а не 404.
@@ -87,7 +99,8 @@ const tab = computed(() => {
 })
 
 const sectionTitle = computed(() => {
-  if (tab.value === 'stats') return 'Статистика команд'
+  if (tab.value === 'teamstats') return 'Итоги матча'
+  if (tab.value === 'stats') return 'Статистика игроков'
   if (tab.value === 'scan') return 'Скан протокола'
   // Подпись зависит от статуса: у несыгранного матча ссылка может вести
   // только на будущую трансляцию, у сыгранного — только на запись.
@@ -289,28 +302,44 @@ useHead(() => ({
       />
     </div>
 
-    <!-- Полоса счёта ведёт к якорям #side-a / #side-b внутри протокола,
-         поэтому вне вкладки статистики она указывала бы в пустоту. -->
+    <!--
+      Та же полоса счёта, но теперь это ПЕРЕКЛЮЧАТЕЛЬ сторон, а не якоря.
+
+      Раньше обе команды шли стопкой, а полоса просто проматывала к нужной —
+      на телефоне это означало пролистать весь состав соперника. Показываем
+      одну сторону, вторая в одном тапе. Полоса остаётся липкой: переключать
+      надо и когда состав уже пролистан.
+    -->
     <div
       v-if="game && showStrip && tab === 'stats'"
       class="sticky top-header z-20 mb-5 border-y border-rule bg-bg"
     >
-      <div class="container-page flex h-12 items-center gap-2 text-sm">
-        <a
-          href="#side-a"
-          class="flex min-h-11 min-w-0 flex-1 items-center justify-end gap-2 font-semibold"
+      <div
+        class="container-page flex h-12 items-center gap-2 text-sm"
+        role="group"
+        aria-label="Команда"
+      >
+        <NuxtLink
+          :to="sideLink('a')"
+          replace
+          class="flex min-h-11 min-w-0 flex-1 items-center justify-end gap-2 border-b-2 font-semibold transition-colors"
+          :class="side === 'a' ? 'border-accent text-accent' : 'border-transparent text-muted'"
+          :aria-current="side === 'a' ? 'true' : undefined"
         >
           <span class="truncate">{{ teamAName || `№${game.team_a_id}` }}</span>
-        </a>
+        </NuxtLink>
         <span class="shrink-0 font-extrabold tabular-nums">
           {{ game.score_team_a ?? '—' }} : {{ game.score_team_b ?? '—' }}
         </span>
-        <a
-          href="#side-b"
-          class="flex min-h-11 min-w-0 flex-1 items-center gap-2 font-semibold"
+        <NuxtLink
+          :to="sideLink('b')"
+          replace
+          class="flex min-h-11 min-w-0 flex-1 items-center gap-2 border-b-2 font-semibold transition-colors"
+          :class="side === 'b' ? 'border-accent text-accent' : 'border-transparent text-muted'"
+          :aria-current="side === 'b' ? 'true' : undefined"
         >
           <span class="truncate">{{ teamBName || `№${game.team_b_id}` }}</span>
-        </a>
+        </NuxtLink>
       </div>
     </div>
 
@@ -337,7 +366,21 @@ useHead(() => ({
         />
       </section>
 
-      <!-- Статистика команд -->
+      <!-- Итоги матча: командная статистика -->
+      <section v-else-if="tab === 'teamstats'">
+        <EmptyState
+          v-if="!game.team_stats.length"
+          icon="info"
+          title="Статистика матча не внесена"
+          hint="Броски, вбрасывания и реализацию заносят отдельно от протокола, и пока это сделано не для всех матчей."
+        />
+        <GameTeamStats
+          v-else
+          :game="game"
+        />
+      </section>
+
+      <!-- Статистика игроков -->
       <section v-else-if="tab === 'stats'">
         <!-- Протокол бывает пустым даже у сыгранного матча со счётом -->
         <EmptyState
@@ -350,18 +393,12 @@ useHead(() => ({
         />
 
         <template v-else>
-          <div class="space-y-8">
-            <BoxScoreSection
-              :side="protocol.a"
-              anchor="side-a"
-              :numbers="numbers"
-            />
-            <BoxScoreSection
-              :side="protocol.b"
-              anchor="side-b"
-              :numbers="numbers"
-            />
-          </div>
+          <!-- Только выбранная сторона: вторая — по переключателю в полосе -->
+          <BoxScoreSection
+            :side="side === 'b' ? protocol.b : protocol.a"
+            :anchor="`side-${side}`"
+            :numbers="numbers"
+          />
 
           <!-- Строки, чья команда не совпала ни с одной из сторон матча.
                Молча выбросить их нельзя: протокол разошёлся бы с шапкой счёта. -->

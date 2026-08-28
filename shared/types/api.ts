@@ -226,6 +226,26 @@ export interface GameEvent {
   video_seconds: number | null
 }
 
+/**
+ * Командная статистика матча: та самая карточка «итоги матча» с бросками,
+ * вбрасываниями и реализацией.
+ *
+ * Приходит массивом на две команды, но полагаться на это нельзя: у матча без
+ * внесённой статистики он пустой, а заполнить могут и одну сторону.
+ */
+export interface GameTeamStat {
+  team_id: number
+  /** null, пока не внесли; 0 — это внесённый ноль, и путать их нельзя */
+  shots: number | null
+  shots_on_goal: number | null
+  /** ВЫИГРАННЫЕ вбрасывания, а не сыгранные: суммы двух команд не равны */
+  faceoffs_won: number | null
+  /** проценты, 0–100 */
+  conversion_percent: number | null
+  /** единственное поле без null: сервер всегда считает его из событий */
+  penalty_minutes: number
+}
+
 export interface GameWithProtocol extends Game {
   /** может быть пустым даже у сыгранного матча со счётом */
   player_stats: PlayerStatLine[]
@@ -234,6 +254,8 @@ export interface GameWithProtocol extends Game {
    * player_stats при этом могут остаться от прежнего ручного ввода.
    */
   events: GameEvent[]
+  /** Пуст, пока статистику не внесли руками. Внесена далеко не у всех матчей. */
+  team_stats: GameTeamStat[]
 }
 
 // ─────────────────────────────── главная
