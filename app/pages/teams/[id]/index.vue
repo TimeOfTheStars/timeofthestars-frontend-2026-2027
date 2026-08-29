@@ -175,6 +175,20 @@ useSeoMeta({
       </section>
 
       <section v-else-if="tab === 'roster'">
+        <!-- Отдельная страница под печать: там состав без навигации сайта,
+             с уменьшенными фото и кнопкой сборки PDF. -->
+        <NuxtLink
+          v-if="data!.rosters.length"
+          :to="`${teamPath(data!.team)}/squad`"
+          class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-rule bg-surface px-3.5 text-sm font-semibold transition-colors hover:border-accent hover:text-accent"
+        >
+          <AppIcon
+            name="file"
+            :size="16"
+          />
+          Скачать состав
+        </NuxtLink>
+
         <div
           v-if="data!.rosters.length"
           class="space-y-8"
