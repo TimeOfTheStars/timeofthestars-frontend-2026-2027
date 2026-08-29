@@ -81,6 +81,32 @@ const tab = computed(() => {
   return segments.value.some(s => s.key === t) ? t : 'standings'
 })
 
+/**
+ * Команды состава в порядке, который отдал сервер (team_id → number).
+ * Отдельного запроса не нужно: принадлежность уже есть у каждого игрока.
+ */
+const rosterTeams = computed(() => {
+  const out: number[] = []
+  for (const p of data.value?.roster ?? []) {
+    if (!out.includes(p.team_id)) out.push(p.team_id)
+  }
+  return out
+})
+
+/**
+ * Выбранная команда состава — в адресе, как и остальные разделы проекта.
+ * Неизвестный или чужой id тихо даёт первую команду: ссылка могла прийти от
+ * другого соревнования, и падать из-за этого не за что.
+ */
+const rosterTeam = computed(() => {
+  const n = Number(route.query.team)
+  return rosterTeams.value.includes(n) ? n : rosterTeams.value[0] ?? null
+})
+
+function rosterTeamLink(id: number) {
+  return { path: route.path, query: { ...route.query, team: String(id) } }
+}
+
 const SECTION_TITLE: Record<string, string> = {
   standings: 'Турнирная таблица',
   schedule: 'Календарь и результаты',
@@ -219,7 +245,43 @@ useSeoMeta({
 
       <!-- Составы -->
       <section v-else-if="tab === 'roster'">
-        <RosterTable :players="data!.roster" />
+        <!--
+          Переключатель команд, как на странице матча. Раньше составы шли
+          стопкой, и до последней команды приходилось листать полторы сотни
+          строк. Команд в турнире больше двух, поэтому не две равные половины,
+          а строка фишек с горизонтальной прокруткой на узком экране.
+        -->
+        <div
+          v-if="rosterTeams.length > 1"
+          class="table-bleed mb-4 overflow-x-auto sm:overflow-visible"
+          role="group"
+          aria-label="Команда"
+        >
+          <div class="flex min-w-max gap-1.5 px-4 sm:min-w-0 sm:flex-wrap sm:px-0">
+            <NuxtLink
+              v-for="id in rosterTeams"
+              :key="id"
+              :to="rosterTeamLink(id)"
+              replace
+              class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-bold whitespace-nowrap transition-colors"
+              :class="rosterTeam === id
+                ? 'border-accent bg-accent text-accent-fg'
+                : 'border-rule text-muted hover:text-fg'"
+              :aria-current="rosterTeam === id ? 'true' : undefined"
+            >
+              <TeamCrest
+                :team-id="id"
+                :size="22"
+              />
+              {{ team(id)?.name ?? `Команда №${id}` }}
+            </NuxtLink>
+          </div>
+        </div>
+
+        <RosterTable
+          :players="data!.roster"
+          :team-id="rosterTeam"
+        />
       </section>
 
       <!-- Лучшие игроки -->
