@@ -25,40 +25,58 @@ const { data, status, error, refresh } = await usePageData('home', async ($api) 
   const featured = pickCurrentCompetition(all.items)
   const blocks = homepageBlocks(homepage)
 
-  // Названия соревнований запрашивать больше не нужно: блок несёт вложенное
-  // competition. Запасной путь со старых полей его не заполняет, поэтому
-  // подпись там падает на справочник соревнований ниже.
-  const [featuredGames, ...blockData] = await Promise.all([
-    featured ? $api<Game[]>(ep.competitionGames(featured.id)) : Promise.resolve([] as Game[]),
-    ...blocks.map(b =>
-      b.type === 'standings'
-        ? $api<StandingRow[]>(ep.standings(b.competition_id)).catch(() => null)
-        // Сетке нужны матчи соревнования — из них же берутся стадии плей-офф.
-        : $api<Game[]>(ep.competitionGames(b.competition_id)).catch(() => null),
-    ),
+  // Матчи нужны каждому блоку — теперь это расписание турнира, — и запасной
+  // ленте по умолчанию. Id складываем в множество: featured обычно совпадает
+  // с одним из блоков, и без этого мы бы дважды тянули одно и то же.
+  const gameIds = [...new Set([
+    ...(featured ? [featured.id] : []),
+    ...blocks.map(b => b.competition_id),
+  ])]
+  const standingsIds = blocks.filter(b => b.type === 'standings').map(b => b.competition_id)
+
+  // Оба веера в одном Promise.all: последовательные await дали бы водопад.
+  // Упавшее соревнование не должно ронять главную целиком.
+  const [gamesList, standingsList] = await Promise.all([
+    Promise.all(gameIds.map(id => $api<Game[]>(ep.competitionGames(id)).catch(() => [] as Game[]))),
+    Promise.all(standingsIds.map(id => $api<StandingRow[]>(ep.standings(id)).catch(() => [] as StandingRow[]))),
   ])
+
+  const gamesBy = new Map(gameIds.map((id, i) => [id, gamesList[i] ?? []]))
+  const standingsBy = new Map(standingsIds.map((id, i) => [id, standingsList[i] ?? []]))
 
   return {
     featured,
-    featuredGames,
-    blocks: blocks.map((block, i) => ({ block, payload: blockData[i] ?? null })),
+    featuredGames: featured ? gamesBy.get(featured.id) ?? [] : [],
+    blocks: blocks.map(block => ({
+      block,
+      games: gamesBy.get(block.competition_id) ?? [],
+      standings: block.type === 'standings' ? standingsBy.get(block.competition_id) ?? [] : [],
+      playoff: block.type === 'bracket'
+        ? (gamesBy.get(block.competition_id) ?? []).filter(isPlayoff)
+        : [],
+    })),
     competitions: all.items,
   }
 })
 
 /**
- * Блоки, по которым реально есть что показать. Сетка отсеивается, если в
- * соревновании нет ни одного матча плей-офф: пустая сетка хуже её отсутствия.
+ * Блоки турниров: расписание сверху, таблица или сетка снизу.
+ *
+ * Блок остаётся, если есть хоть что показать — расписание или нижнюю часть.
+ * Сетка без матчей плей-офф отсеивается: пустая сетка хуже её отсутствия.
  */
 const blocks = computed(() =>
-  (data.value?.blocks ?? [])
-    .map(({ block, payload }) => ({
-      block,
-      standings: block.type === 'standings' ? (payload as StandingRow[] | null) ?? [] : [],
-      playoff: block.type === 'bracket' ? ((payload as Game[] | null) ?? []).filter(isPlayoff) : [],
-    }))
-    .filter(b => (b.block.type === 'standings' ? b.standings.length > 0 : b.playoff.length > 0)),
+  (data.value?.blocks ?? []).filter(b =>
+    b.games.length > 0
+    || (b.block.type === 'standings' ? b.standings.length > 0 : b.playoff.length > 0),
+  ),
 )
+
+/**
+ * Лента по умолчанию нужна, только когда блоков нет вовсе: иначе она
+ * повторяла бы расписание внутри первого же блока.
+ */
+const showFeaturedFeed = computed(() => blocks.value.length === 0 && !!data.value?.featured)
 
 /** Подпись блока: своя из админки, иначе название из блока или справочника. */
 function titleOf(block: HomepageBlock): string {
@@ -195,7 +213,7 @@ useSeoMeta({
           большого пальца. Заголовок и стрелки рисует сама карусель.
         -->
         <section
-          v-if="data?.featured"
+          v-if="showFeaturedFeed && data?.featured"
           class="mb-8"
         >
           <GameCarousel
@@ -206,41 +224,68 @@ useSeoMeta({
         </section>
 
         <!--
-          Блоки из админки: до трёх таблиц и сеток, порядок задаёт position.
-          Раньше это были два жёстко зашитых блока — одна таблица и одна
-          сетка; теперь их набор и порядок настраиваются, поэтому цикл.
-        -->
-        <section
-          v-for="item in blocks"
-          :key="item.block.id"
-          class="mb-8"
-        >
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <h2 class="min-w-0 truncate text-lg font-bold">
-              <template v-if="item.block.type === 'bracket'">Плей-офф · </template>{{ titleOf(item.block) }}
-            </h2>
-            <NuxtLink
-              :to="competitionPath({ id: item.block.competition_id })"
-              class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
-            >
-              Всё
-              <AppIcon
-                name="chevronRight"
-                :size="15"
-              />
-            </NuxtLink>
-          </div>
+          Блок турнира: расписание сверху, таблица или сетка снизу.
 
-          <StandingsTable
-            v-if="item.block.type === 'standings'"
-            :rows="item.standings"
-            :highlight-team-id="myTeamId"
+          Раньше лента матчей была одна на всю главную и относилась к
+          «текущему» соревнованию, а таблицы висели отдельно. Когда турниров
+          стало несколько, это перестало читаться: непонятно, к какому из них
+          относятся матчи. Теперь каждый турнир — самостоятельный блок.
+
+          Заголовок ленты не передаём: название турнира уже стоит в шапке
+          блока, а карусель без title оставляет только стрелки.
+        -->
+        <template
+          v-for="(item, i) in blocks"
+          :key="item.block.id"
+        >
+          <!-- Разделитель между турнирами: линия, растворяющаяся к краям.
+               Сплошная делила бы страницу жёстче, чем нужно, — блоки
+               соседние, а не разные разделы. -->
+          <div
+            v-if="i > 0"
+            aria-hidden="true"
+            class="mb-8 h-px bg-gradient-to-r from-transparent via-rule-strong to-transparent"
           />
-          <PlayoffBracket
-            v-else
-            :games="item.playoff"
-          />
-        </section>
+
+          <section class="mb-8">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <h2 class="min-w-0 truncate text-lg font-bold">
+                {{ titleOf(item.block) }}
+              </h2>
+              <NuxtLink
+                :to="competitionPath({ id: item.block.competition_id })"
+                class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
+              >
+                Всё
+                <AppIcon
+                  name="chevronRight"
+                  :size="15"
+                />
+              </NuxtLink>
+            </div>
+
+            <GameCarousel
+              v-if="item.games.length"
+              :games="item.games"
+              class="mb-6"
+            />
+
+            <template v-if="item.block.type === 'standings' ? item.standings.length : item.playoff.length">
+              <h3 class="mb-2 text-xs font-bold tracking-wide text-muted uppercase">
+                {{ item.block.type === 'bracket' ? 'Плей-офф' : 'Турнирная таблица' }}
+              </h3>
+              <StandingsTable
+                v-if="item.block.type === 'standings'"
+                :rows="item.standings"
+                :highlight-team-id="myTeamId"
+              />
+              <PlayoffBracket
+                v-else
+                :games="item.playoff"
+              />
+            </template>
+          </section>
+        </template>
 
         <template v-if="data?.featured">
           <NuxtLink
