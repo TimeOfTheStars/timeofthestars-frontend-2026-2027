@@ -40,6 +40,12 @@ const ICONS: Record<string, string> = {
   // геометрия своя, но обводка и сетка те же.
   puck:
     '<ellipse cx="12" cy="8.5" rx="7" ry="3.2"/><path d="M5 8.5v5c0 1.77 3.13 3.2 7 3.2s7-1.43 7-3.2v-5"/>',
+  // Плитка: четыре квадрата (Lucide layout-grid)
+  grid:
+    '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  // Список: строки с маркерами (Lucide list)
+  list:
+    '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
   // Смена: две встречные стрелки (Lucide arrow-left-right)
   swap:
     '<path d="m8 3-4 4 4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',

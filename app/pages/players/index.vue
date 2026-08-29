@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Page, Player } from '#shared/types/api'
+import type { LocationQueryRaw } from 'vue-router'
 import { ep } from '#shared/utils/endpoints'
 
 /** search — подстрока по ФИО. Сортировка серверная, по ФИО. */
@@ -19,6 +20,23 @@ const { data, status, error, refresh } = await usePageData(
 )
 
 const pages = computed(() => (data.value ? Math.ceil(data.value.total / data.value.size) : 0))
+
+/**
+ * Вид списка — в адресе, как и остальные переключатели проекта: выбор
+ * переживает переход на другую страницу пагинации и «назад».
+ *
+ * По умолчанию список: он плотнее, а половина игроков без фотографии, и
+ * плитка из монограмм выглядит пустее, чем строки.
+ */
+const view = computed<'list' | 'cards'>(() => (route.query.view === 'cards' ? 'cards' : 'list'))
+
+function viewLink(next: 'list' | 'cards') {
+  const query: LocationQueryRaw = { ...route.query }
+  // Список — состояние по умолчанию, в адрес его не пишем
+  if (next === 'cards') query.view = next
+  else delete query.view
+  return { path: route.path, query }
+}
 
 useHead({ title: 'Игроки' })
 useSeoMeta({
@@ -54,11 +72,73 @@ useSeoMeta({
     />
 
     <template v-else-if="data?.items.length">
-      <p class="mb-2 text-xs text-muted">
-        {{ pluralWith(data.total, ['игрок', 'игрока', 'игроков']) }}
-      </p>
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-muted">
+          {{ pluralWith(data.total, ['игрок', 'игрока', 'игроков']) }}
+        </p>
 
-      <ul class="space-y-2">
+        <!-- Вид списка. Ссылками, а не кнопками: выбор попадает в адрес и
+             сохраняется при переходе по страницам. -->
+        <div
+          class="flex gap-1 rounded-lg border border-rule p-1"
+          role="group"
+          aria-label="Вид списка"
+        >
+          <NuxtLink
+            v-for="opt in [
+              { key: 'list', icon: 'list', label: 'Списком' },
+              { key: 'cards', icon: 'grid', label: 'Плиткой' },
+            ]"
+            :key="opt.key"
+            :to="viewLink(opt.key as 'list' | 'cards')"
+            replace
+            class="flex size-9 items-center justify-center rounded-md transition-colors"
+            :class="view === opt.key ? 'bg-accent text-accent-fg' : 'text-muted hover:text-fg'"
+            :aria-label="opt.label"
+            :aria-current="view === opt.key ? 'true' : undefined"
+          >
+            <AppIcon
+              :name="opt.icon"
+              :size="17"
+            />
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- Плитка: крупное фото, имя, амплуа -->
+      <ul
+        v-if="view === 'cards'"
+        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+      >
+        <li
+          v-for="p in data.items"
+          :key="p.id"
+        >
+          <NuxtLink
+            :to="playerPath(p)"
+            class="reveal flex h-full flex-col items-center gap-2 rounded-xl border border-rule bg-surface p-4 text-center transition-colors hover:border-rule-strong"
+          >
+            <PlayerAvatar
+              :player="p"
+              :size="96"
+            />
+            <span class="mt-1 line-clamp-2 font-semibold">{{ p.full_name }}</span>
+            <span
+              v-if="p.position"
+              class="text-xs text-muted"
+            >{{ p.position }}</span>
+            <span
+              v-if="age(p.birth_date) != null"
+              class="mt-auto text-xs text-muted"
+            >{{ pluralWith(age(p.birth_date)!, ['год', 'года', 'лет']) }}</span>
+          </NuxtLink>
+        </li>
+      </ul>
+
+      <ul
+        v-else
+        class="space-y-2"
+      >
         <li
           v-for="p in data.items"
           :key="p.id"
