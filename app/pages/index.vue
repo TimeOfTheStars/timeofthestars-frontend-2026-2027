@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import type { Competition, Game, Homepage, Page, StandingRow } from '#shared/types/api'
+import type { Competition, Game, Homepage, HomepageBlock, Page, StandingRow } from '#shared/types/api'
 import { ep, teamGamesQuery } from '#shared/utils/endpoints'
 
 /**
  * Главная.
  *
- * ⚠️ Штатное состояние /homepage — ПУСТОЕ: в живой базе там
- * show_bracket: false, show_standings: false и оба id null. Поэтому строить
- * главную только на этих флагах нельзя — она была бы пустой страницей.
+ * ⚠️ Штатное состояние /homepage — ПУСТОЕ: блоков может не быть вовсе.
+ * Поэтому строить главную только на них нельзя — она была бы пустой
+ * страницей. Источник по умолчанию: самое свежее соревнование, и уже из
+ * него — лента матчей. Блоки только ДОБАВЛЯЮТ таблицы и сетки сверху.
  *
- * Источник по умолчанию: самое свежее соревнование (сервер сортирует
- * start_date ↓, id ↓ — берём первый элемент), и уже из него — ближайшие матчи
- * и последние результаты. Флаги /homepage только ДОБАВЛЯЮТ блоки сверху,
- * и проверяются вместе с id: админка допускает true при null.
+ * Блоков до трёх, каждый со своим соревнованием, поэтому данные под них
+ * грузятся веером в том же Promise.all — водопада не возникает.
  */
 const { data, status, error, refresh } = await usePageData('home', async ($api) => {
   const [homepage, all] = await Promise.all([
@@ -24,32 +23,49 @@ const { data, status, error, refresh } = await usePageData('home', async ($api) 
   ])
 
   const featured = pickCurrentCompetition(all.items)
+  const blocks = homepageBlocks(homepage)
 
-  // Оба условия — и флаг, и id
-  const standingsId
-    = homepage.show_standings && homepage.standings_competition_id != null
-      ? homepage.standings_competition_id
-      : null
-  const bracketId
-    = homepage.show_bracket && homepage.bracket_competition_id != null
-      ? homepage.bracket_competition_id
-      : null
-
-  // Названия соревнований берём отдельными запросами: ни в standings, ни в
-  // games его нет, а блок без названия не сообщает, к чему относятся цифры —
-  // таблица и сетка на главной вполне могут быть от РАЗНЫХ соревнований.
-  const [featuredGames, standings, standingsComp, bracketGames, bracketComp] = await Promise.all([
-    featured ? $api<Game[]>(ep.competitionGames(featured.id)) : Promise.resolve([]),
-    standingsId ? $api<StandingRow[]>(ep.standings(standingsId)) : Promise.resolve(null),
-    standingsId ? $api<Competition>(ep.competition(standingsId)) : Promise.resolve(null),
-    bracketId ? $api<Game[]>(ep.competitionGames(bracketId)) : Promise.resolve(null),
-    bracketId ? $api<Competition>(ep.competition(bracketId)) : Promise.resolve(null),
+  // Названия соревнований запрашивать больше не нужно: блок несёт вложенное
+  // competition. Запасной путь со старых полей его не заполняет, поэтому
+  // подпись там падает на справочник соревнований ниже.
+  const [featuredGames, ...blockData] = await Promise.all([
+    featured ? $api<Game[]>(ep.competitionGames(featured.id)) : Promise.resolve([] as Game[]),
+    ...blocks.map(b =>
+      b.type === 'standings'
+        ? $api<StandingRow[]>(ep.standings(b.competition_id)).catch(() => null)
+        // Сетке нужны матчи соревнования — из них же берутся стадии плей-офф.
+        : $api<Game[]>(ep.competitionGames(b.competition_id)).catch(() => null),
+    ),
   ])
 
-  return { featured, featuredGames, standings, standingsComp, bracketGames, bracketComp }
+  return {
+    featured,
+    featuredGames,
+    blocks: blocks.map((block, i) => ({ block, payload: blockData[i] ?? null })),
+    competitions: all.items,
+  }
 })
 
-const playoffGames = computed(() => (data.value?.bracketGames ?? []).filter(isPlayoff))
+/**
+ * Блоки, по которым реально есть что показать. Сетка отсеивается, если в
+ * соревновании нет ни одного матча плей-офф: пустая сетка хуже её отсутствия.
+ */
+const blocks = computed(() =>
+  (data.value?.blocks ?? [])
+    .map(({ block, payload }) => ({
+      block,
+      standings: block.type === 'standings' ? (payload as StandingRow[] | null) ?? [] : [],
+      playoff: block.type === 'bracket' ? ((payload as Game[] | null) ?? []).filter(isPlayoff) : [],
+    }))
+    .filter(b => (b.block.type === 'standings' ? b.standings.length > 0 : b.playoff.length > 0)),
+)
+
+/** Подпись блока: своя из админки, иначе название из блока или справочника. */
+function titleOf(block: HomepageBlock): string {
+  if (block.title || block.competition) return blockTitle(block)
+  const found = data.value?.competitions.find(c => c.id === block.competition_id)
+  return found?.name ?? blockTitle(block)
+}
 
 // «Моя команда» живёт в localStorage, поэтому известна только на клиенте.
 const { myTeamId } = useMyTeam()
@@ -189,18 +205,22 @@ useSeoMeta({
           />
         </section>
 
-        <!-- Блок из админки: таблица выбранного соревнования -->
+        <!--
+          Блоки из админки: до трёх таблиц и сеток, порядок задаёт position.
+          Раньше это были два жёстко зашитых блока — одна таблица и одна
+          сетка; теперь их набор и порядок настраиваются, поэтому цикл.
+        -->
         <section
-          v-if="data?.standings?.length"
+          v-for="item in blocks"
+          :key="item.block.id"
           class="mb-8"
         >
           <div class="mb-3 flex items-center justify-between gap-3">
             <h2 class="min-w-0 truncate text-lg font-bold">
-              {{ data.standingsComp?.name ?? 'Турнирная таблица' }}
+              <template v-if="item.block.type === 'bracket'">Плей-офф · </template>{{ titleOf(item.block) }}
             </h2>
             <NuxtLink
-              v-if="data.standingsComp"
-              :to="competitionPath(data.standingsComp)"
+              :to="competitionPath({ id: item.block.competition_id })"
               class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
             >
               Всё
@@ -210,36 +230,15 @@ useSeoMeta({
               />
             </NuxtLink>
           </div>
+
           <StandingsTable
-            :rows="data.standings"
+            v-if="item.block.type === 'standings'"
+            :rows="item.standings"
             :highlight-team-id="myTeamId"
           />
-        </section>
-
-        <!-- Блок из админки: сетка плей-офф -->
-        <section
-          v-if="playoffGames.length"
-          class="mb-8"
-        >
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <h2 class="min-w-0 truncate text-lg font-bold">
-              Плей-офф<template v-if="data.bracketComp"> · {{ data.bracketComp.name }}</template>
-            </h2>
-            <NuxtLink
-              v-if="data.bracketComp"
-              :to="competitionPath(data.bracketComp)"
-              class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
-            >
-              Всё
-              <AppIcon
-                name="chevronRight"
-                :size="15"
-              />
-            </NuxtLink>
-          </div>
           <PlayoffBracket
-            :games="playoffGames"
-            :winner-team-id="data.bracketComp?.winner_team_id"
+            v-else
+            :games="item.playoff"
           />
         </section>
 

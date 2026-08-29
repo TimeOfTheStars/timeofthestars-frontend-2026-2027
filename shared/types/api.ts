@@ -260,7 +260,40 @@ export interface GameWithProtocol extends Game {
 
 // ─────────────────────────────── главная
 
+/** Краткое соревнование: приходит вложенным в блок главной. */
+export interface CompetitionBrief {
+  id: number
+  type: CompetitionType
+  name: string
+  logo_url: string | null
+}
+
+export type HomepageBlockType = 'standings' | 'bracket'
+
+export interface HomepageBlock {
+  id: number
+  /** порядок на странице; сортируем по нему, а не полагаемся на порядок массива */
+  position: number
+  type: HomepageBlockType
+  competition_id: number
+  /** своя подпись из админки; null — берём название соревнования */
+  title: string | null
+  /**
+   * Соревнование блока. Благодаря ему отдельный запрос за названием больше
+   * не нужен. Схема допускает null, поэтому фолбэк на competition_id обязан
+   * остаться.
+   */
+  competition: CompetitionBrief | null
+}
+
 export interface Homepage {
+  /** До ТРЁХ блоков. Пустой массив — штатное состояние, не ошибка. */
+  blocks: HomepageBlock[]
+  /**
+   * Поля ниже — прежний способ задать один блок таблицы и один сетки.
+   * Сервер их всё ещё отдаёт, поэтому оставлены как запасной источник:
+   * если blocks пуст, а флаги выставлены, главная не должна опустеть.
+   */
   show_bracket: boolean
   bracket_competition_id: number | null
   show_standings: boolean
