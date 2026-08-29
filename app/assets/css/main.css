@@ -320,14 +320,15 @@
       display: none !important;
     }
 
-    /* Поля задаёт страница, а не контейнер сайта */
+    /* Ширину снимаем, а боковой отступ оставляем: одних полей страницы
+       мало — сетка упиралась в край листа. */
     .container-page {
       max-width: none;
-      padding-inline: 0;
+      padding-inline: 6mm;
     }
 
     @page {
-      margin: 12mm;
+      margin: 14mm;
     }
   }
 
