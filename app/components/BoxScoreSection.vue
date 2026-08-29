@@ -121,6 +121,14 @@ const hasGoalies = computed(() => props.side.goalies.length > 0)
                   aria-hidden="true"
                 >{{ numbers.get(line.player_id) ?? '' }}</span>
 
+                <!-- Фото 22px. У строки без игрока (player === null) его
+                     нет: подставлять монограмму не из чего, а рисовать пустой
+                     кружок значит обещать данные, которых в протоколе не было. -->
+                <PlayerAvatar
+                  v-if="line.player"
+                  :player="line.player"
+                  :size="22"
+                />
                 <span
                   class="min-w-0 flex-1 truncate"
                   :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
@@ -214,10 +222,20 @@ const hasGoalies = computed(() => props.side.goalies.length > 0)
                 scope="row"
                 class="border-b border-rule py-2 pl-4 text-left font-normal"
               >
-                <span
-                  class="block truncate"
-                  :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
-                >{{ lineName(line).text }}</span>
+                <span class="flex min-h-11 items-center gap-1.5">
+                  <!-- Вратарская таблица ДОПОЛНЯЕТ основную, поэтому фото
+                       здесь такое же: иначе один и тот же игрок выглядел бы
+                       по-разному в двух таблицах одной страницы. -->
+                  <PlayerAvatar
+                    v-if="line.player"
+                    :player="line.player"
+                    :size="22"
+                  />
+                  <span
+                    class="min-w-0 flex-1 truncate"
+                    :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
+                  >{{ lineName(line).text }}</span>
+                </span>
               </th>
               <!--
                 Спека обещает, что вратарские поля непусты ТОЛЬКО КОГДА

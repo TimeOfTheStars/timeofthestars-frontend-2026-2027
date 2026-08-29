@@ -138,7 +138,7 @@ const tdBase = 'border-b border-rule py-2 text-right tabular-nums'
             </th>
             <th
               scope="col"
-              class="w-4 pr-4 sm:hidden"
+              class="w-2 pr-3 sm:hidden"
               :class="thBase"
             >
               <span class="sr-only">Штрафные минуты</span>
@@ -168,6 +168,12 @@ const tdBase = 'border-b border-rule py-2 text-right tabular-nums'
                 :to="playerPath(row.player)"
                 class="flex min-h-12 items-center gap-1.5"
               >
+                <!-- Фото 22px: PlayerAvatar сам подставляет монограмму, когда
+                     photo_url пуст, а пуст он примерно у половины игроков. -->
+                <PlayerAvatar
+                  :player="row.player"
+                  :size="22"
+                />
                 <span class="min-w-0 flex-1">
                   <span class="block truncate font-semibold">{{ row.player.full_name }}</span>
                 </span>
