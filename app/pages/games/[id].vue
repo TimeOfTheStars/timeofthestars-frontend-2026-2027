@@ -303,43 +303,50 @@ useHead(() => ({
     </div>
 
     <!--
-      Та же полоса счёта, но теперь это ПЕРЕКЛЮЧАТЕЛЬ сторон, а не якоря.
+      Переключатель сторон протокола.
 
-      Раньше обе команды шли стопкой, а полоса просто проматывала к нужной —
-      на телефоне это означало пролистать весь состав соперника. Показываем
-      одну сторону, вторая в одном тапе. Полоса остаётся липкой: переключать
-      надо и когда состав уже пролистан.
+      Раньше здесь была полоса счёта с якорями, и после перехода на одну
+      сторону она осталась похожей на неё же — подчёркивание снизу читалось
+      как «тут просто ссылки». Сегментированный контрол с гербом и заливкой
+      активной половины ошибиться не даёт.
+
+      Счёт отсюда убран: он крупно стоит в шапке матча выше, а здесь только
+      мешал — из-за него на половины оставалось меньше места, и длинные
+      названия обрезались.
+
+      Липкий намеренно: переключать нужно и когда состав уже пролистан.
     -->
     <div
       v-if="game && showStrip && tab === 'stats'"
-      class="sticky top-header z-20 mb-5 border-y border-rule bg-bg"
+      class="sticky top-header z-20 mb-5 border-b border-rule bg-bg py-2"
     >
       <div
-        class="container-page flex h-12 items-center gap-2 text-sm"
+        class="container-page"
         role="group"
         aria-label="Команда"
       >
-        <NuxtLink
-          :to="sideLink('a')"
-          replace
-          class="flex min-h-11 min-w-0 flex-1 items-center justify-end gap-2 border-b-2 font-semibold transition-colors"
-          :class="side === 'a' ? 'border-accent text-accent' : 'border-transparent text-muted'"
-          :aria-current="side === 'a' ? 'true' : undefined"
-        >
-          <span class="truncate">{{ teamAName || `№${game.team_a_id}` }}</span>
-        </NuxtLink>
-        <span class="shrink-0 font-extrabold tabular-nums">
-          {{ game.score_team_a ?? '—' }} : {{ game.score_team_b ?? '—' }}
-        </span>
-        <NuxtLink
-          :to="sideLink('b')"
-          replace
-          class="flex min-h-11 min-w-0 flex-1 items-center gap-2 border-b-2 font-semibold transition-colors"
-          :class="side === 'b' ? 'border-accent text-accent' : 'border-transparent text-muted'"
-          :aria-current="side === 'b' ? 'true' : undefined"
-        >
-          <span class="truncate">{{ teamBName || `№${game.team_b_id}` }}</span>
-        </NuxtLink>
+        <div class="flex gap-1 rounded-xl border border-rule bg-surface-2 p-1">
+          <NuxtLink
+            v-for="opt in [
+              { key: 'a', id: game.team_a_id, name: teamAName },
+              { key: 'b', id: game.team_b_id, name: teamBName },
+            ]"
+            :key="opt.key"
+            :to="sideLink(opt.key as 'a' | 'b')"
+            replace
+            class="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 text-sm font-bold transition-colors"
+            :class="side === opt.key
+              ? 'bg-accent text-accent-fg'
+              : 'text-muted hover:text-fg'"
+            :aria-current="side === opt.key ? 'true' : undefined"
+          >
+            <TeamCrest
+              :team-id="opt.id"
+              :size="22"
+            />
+            <span class="truncate">{{ opt.name || `№${opt.id}` }}</span>
+          </NuxtLink>
+        </div>
       </div>
     </div>
 
