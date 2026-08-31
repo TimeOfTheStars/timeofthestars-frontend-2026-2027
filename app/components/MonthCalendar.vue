@@ -40,15 +40,19 @@ function dayLink(iso: string) {
 }
 
 /**
- * День, чьи карточки показываются под сеткой на телефоне.
- * Выбранный явно, иначе сегодня (если он в этом месяце), иначе первый день
- * с матчами: пустой блок под сеткой ничего не сообщает.
+ * День, чьи карточки показываются под сеткой.
+ *
+ * Выбранный явно, иначе БЛИЖАЙШИЙ к сегодняшнему день с матчами — не первый
+ * в месяце. Открывая август последним числом, логично увидеть матч 30-го, а
+ * не 18-го: первый по порядку тут ничем не лучше любого другого.
  */
 const activeDay = computed(() => {
-  const cells = props.grid.weeks.flat().filter(c => c.inMonth)
-  if (props.day && cells.some(c => c.iso === props.day)) return props.day
-  if (cells.some(c => c.iso === props.today && c.games.length)) return props.today
-  return cells.find(c => c.games.length)?.iso ?? null
+  const withGames = props.grid.weeks.flat().filter(c => c.inMonth && c.games.length)
+  if (props.day && withGames.some(c => c.iso === props.day)) return props.day
+  if (!withGames.length) return null
+
+  const dist = (iso: string) => Math.abs(Date.parse(iso) - Date.parse(props.today))
+  return withGames.reduce((best, c) => (dist(c.iso) < dist(best.iso) ? c : best)).iso
 })
 
 const activeGames = computed<Game[]>(() =>
@@ -187,12 +191,16 @@ const VISIBLE = 3
     </div>
 
     <!--
-      Карточки выбранного дня. Только на телефоне: на широком экране матчи
-      уже видны в самих ячейках, и дубль под сеткой был бы шумом.
+      Карточки выбранного дня — на всех экранах.
+
+      Сначала блок был только на телефоне: на широком экране матчи и так видны
+      в ячейках. Но тогда клик по дате на десктопе менял лишь обводку ячейки и
+      читался как «ничего не произошло». К тому же в ячейке помещаются только
+      счёт и названия, а карточка несёт гербы, стадию и ссылку на протокол.
     -->
     <div
       v-if="activeGames.length"
-      class="mt-4 sm:hidden"
+      class="mt-4"
     >
       <h4 class="mb-2 text-sm font-bold first-letter:uppercase">
         {{ ruDate(activeDay!) }}<span class="font-normal text-muted"> · {{ ruWeekday(activeDay!) }}</span>
