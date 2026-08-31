@@ -106,6 +106,10 @@
     --text-muted: var(--color-steel-600);
     --rule: var(--color-steel-200);
     --rule-strong: var(--color-steel-400);
+    /* Блик по верхней кромке стеклянной пилюли.
+       В светлой теме белый по белому фону невидим, поэтому здесь наоборот —
+       еле заметное затемнение, обозначающее край. */
+    --glass-edge: #00000014;
     --accent: var(--color-blue-700);
     --accent-fg: #ffffff;
     --flag: var(--color-red-600);
@@ -121,6 +125,8 @@
     --text-muted: var(--color-steel-300);
     --rule: var(--color-steel-700);
     --rule-strong: var(--color-steel-500);
+    /* А в тёмной блик работает как положено — светлая кромка */
+    --glass-edge: #ffffff2e;
     --accent: var(--color-blue-300);
     --accent-fg: var(--color-steel-950);
     --flag: var(--color-red-400);
@@ -389,30 +395,26 @@
 
 
   /*
-    Стекло нижней панели. Класс вешается только на устройствах Apple —
-    почему именно так, подробно в AppBottomNav.vue.
+    Плавающая пилюля нижней панели. Форма и тень — общие для всех устройств,
+    стекло сверху добавляется только на Apple (см. AppBottomNav.vue).
 
-    Блик по верхней кромке обязателен: без него это просто мутный слой.
-    Стекло читается именно по светлой линии на границе — так же, как у
-    системных панелей iOS.
+    Блик задан внутренней тенью, а не псевдоэлементом с линией: inset-тень
+    сама идёт по скруглению, а прямая линия поперёк пилюли торчала бы за
+    краями. Именно блик по верхней кромке и читается как стекло — без него
+    остаётся просто мутный слой.
+
+    Внешняя тень обязательна: приподнятая панель без неё выглядит не
+    парящей, а приклеенной к случайному месту экрана.
   */
-  .nav-glass {
-    background: color-mix(in oklab, var(--bg) 72%, transparent);
-    position: relative;
+  .nav-pill {
+    border: 1px solid var(--rule);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      0 6px 20px -6px rgb(0 0 0 / 35%);
   }
 
-  .nav-glass::before {
-    content: '';
-    position: absolute;
-    inset-inline: 0;
-    top: 0;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in oklab, var(--color-fg) 22%, transparent),
-      transparent
-    );
+  .nav-glass {
+    background: color-mix(in oklab, var(--bg) 70%, transparent);
   }
 
   @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
@@ -441,10 +443,6 @@
       background: var(--bg);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
-    }
-
-    .nav-glass::before {
-      display: none;
     }
   }
 
