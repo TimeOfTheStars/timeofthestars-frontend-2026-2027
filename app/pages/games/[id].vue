@@ -358,189 +358,196 @@ useHead(() => ({
         {{ sectionTitle }}
       </h2>
 
-      <!-- Хронология -->
-      <section v-if="tab === 'timeline'">
-        <EmptyState
-          v-if="!timeline || timeline.isEmpty"
-          icon="clock"
-          title="Хронология матча не заполнена"
-          hint="Голы и удаления вносят отдельно от протокола, поэтому у сыгранного матча её может не быть."
-        />
-        <GameTimeline
-          v-else
-          :timeline="timeline"
-          :game="game"
-        />
-      </section>
+      <!-- Переход между разделами: сдвиг вбок читается как свайп.
+           Анимируется секция целиком, см. про .reveal в main.css. -->
+      <Transition
+        name="pane"
+        mode="out-in"
+      >
+        <!-- Хронология -->
+        <section v-if="tab === 'timeline'">
+          <EmptyState
+            v-if="!timeline || timeline.isEmpty"
+            icon="clock"
+            title="Хронология матча не заполнена"
+            hint="Голы и удаления вносят отдельно от протокола, поэтому у сыгранного матча её может не быть."
+          />
+          <GameTimeline
+            v-else
+            :timeline="timeline"
+            :game="game"
+          />
+        </section>
 
-      <!-- Итоги матча: командная статистика -->
-      <section v-else-if="tab === 'teamstats'">
-        <EmptyState
-          v-if="!game.team_stats.length"
-          icon="info"
-          title="Статистика матча не внесена"
-          hint="Броски, вбрасывания и реализацию заносят отдельно от протокола, и пока это сделано не для всех матчей."
-        />
-        <GameTeamStats
-          v-else
-          :game="game"
-        />
-      </section>
+        <!-- Итоги матча: командная статистика -->
+        <section v-else-if="tab === 'teamstats'">
+          <EmptyState
+            v-if="!game.team_stats.length"
+            icon="info"
+            title="Статистика матча не внесена"
+            hint="Броски, вбрасывания и реализацию заносят отдельно от протокола, и пока это сделано не для всех матчей."
+          />
+          <GameTeamStats
+            v-else
+            :game="game"
+          />
+        </section>
 
-      <!-- Статистика игроков -->
-      <section v-else-if="tab === 'stats'">
-        <!-- Протокол бывает пустым даже у сыгранного матча со счётом -->
-        <EmptyState
-          v-if="!protocol || protocol.isEmpty"
-          icon="file"
-          title="Протокол матча не опубликован"
-          :hint="outcome?.played
-            ? 'Счёт внесён, а состав по игрокам — ещё нет.'
-            : 'Появится после матча.'"
-        />
-
-        <template v-else>
-          <!-- Только выбранная сторона: вторая — по переключателю в полосе -->
-          <BoxScoreSection
-            :side="side === 'b' ? protocol.b : protocol.a"
-            :anchor="`side-${side}`"
-            :numbers="numbers"
+        <!-- Статистика игроков -->
+        <section v-else-if="tab === 'stats'">
+          <!-- Протокол бывает пустым даже у сыгранного матча со счётом -->
+          <EmptyState
+            v-if="!protocol || protocol.isEmpty"
+            icon="file"
+            title="Протокол матча не опубликован"
+            :hint="outcome?.played
+              ? 'Счёт внесён, а состав по игрокам — ещё нет.'
+              : 'Появится после матча.'"
           />
 
-          <!-- Строки, чья команда не совпала ни с одной из сторон матча.
-               Молча выбросить их нельзя: протокол разошёлся бы с шапкой счёта. -->
-          <section
-            v-if="protocol.orphans.length"
-            class="mt-8"
-          >
-            <h3 class="mb-2 text-sm font-bold">
-              Прочие строки протокола
-            </h3>
-            <p class="mb-3 text-xs text-muted">
-              У этих строк указана команда, не участвующая в матче. Так бывает, если
-              игрока перевели в другую команду после внесения протокола.
-            </p>
-            <ul class="space-y-1.5">
-              <li
-                v-for="(line, i) in protocol.orphans"
-                :key="lineKey(line, i)"
-                class="flex items-center gap-2 rounded-lg border border-rule bg-surface px-3 py-2 text-sm"
-              >
-                <span
-                  class="min-w-0 flex-1 truncate"
-                  :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
-                >{{ lineName(line).text }}</span>
-                <span class="shrink-0 text-xs text-muted">
-                  {{ team(line.team_id)?.name ?? `команда №${line.team_id}` }}
-                </span>
-                <span class="shrink-0 font-bold tabular-nums">
-                  {{ line.goals }}+{{ line.assists }}
-                </span>
-              </li>
-            </ul>
-          </section>
-        </template>
-      </section>
-
-      <!-- Скан бумажного протокола -->
-      <section v-else-if="tab === 'scan'">
-        <EmptyState
-          v-if="!scanUrl"
-          icon="file"
-          title="Скан протокола не загружен"
-          hint="Бумажный протокол выкладывают после матча, и не для каждой игры."
-        />
-
-        <template v-else>
-          <div class="overflow-hidden rounded-xl border border-rule bg-surface-2">
-            <iframe
-              v-if="isPdf(game.scan)"
-              :src="scanUrl"
-              title="Скан протокола матча"
-              class="h-[80vh] w-full border-0"
+          <template v-else>
+            <!-- Только выбранная сторона: вторая — по переключателю в полосе -->
+            <BoxScoreSection
+              :side="side === 'b' ? protocol.b : protocol.a"
+              :anchor="`side-${side}`"
+              :numbers="numbers"
             />
-            <img
-              v-else
-              :src="scanUrl"
-              alt="Скан протокола матча"
-              loading="lazy"
-              class="mx-auto block max-h-[80vh] w-auto max-w-full"
+
+            <!-- Строки, чья команда не совпала ни с одной из сторон матча.
+                 Молча выбросить их нельзя: протокол разошёлся бы с шапкой счёта. -->
+            <section
+              v-if="protocol.orphans.length"
+              class="mt-8"
             >
+              <h3 class="mb-2 text-sm font-bold">
+                Прочие строки протокола
+              </h3>
+              <p class="mb-3 text-xs text-muted">
+                У этих строк указана команда, не участвующая в матче. Так бывает, если
+                игрока перевели в другую команду после внесения протокола.
+              </p>
+              <ul class="space-y-1.5">
+                <li
+                  v-for="(line, i) in protocol.orphans"
+                  :key="lineKey(line, i)"
+                  class="flex items-center gap-2 rounded-lg border border-rule bg-surface px-3 py-2 text-sm"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate"
+                    :class="lineName(line).unnamed ? 'italic text-muted' : 'font-semibold'"
+                  >{{ lineName(line).text }}</span>
+                  <span class="shrink-0 text-xs text-muted">
+                    {{ team(line.team_id)?.name ?? `команда №${line.team_id}` }}
+                  </span>
+                  <span class="shrink-0 font-bold tabular-nums">
+                    {{ line.goals }}+{{ line.assists }}
+                  </span>
+                </li>
+              </ul>
+            </section>
+          </template>
+        </section>
+
+        <!-- Скан бумажного протокола -->
+        <section v-else-if="tab === 'scan'">
+          <EmptyState
+            v-if="!scanUrl"
+            icon="file"
+            title="Скан протокола не загружен"
+            hint="Бумажный протокол выкладывают после матча, и не для каждой игры."
+          />
+
+          <template v-else>
+            <div class="overflow-hidden rounded-xl border border-rule bg-surface-2">
+              <iframe
+                v-if="isPdf(game.scan)"
+                :src="scanUrl"
+                title="Скан протокола матча"
+                class="h-[80vh] w-full border-0"
+              />
+              <img
+                v-else
+                :src="scanUrl"
+                alt="Скан протокола матча"
+                loading="lazy"
+                class="mx-auto block max-h-[80vh] w-auto max-w-full"
+              >
+            </div>
+
+            <!--
+              Атрибут download браузеры для межсайтовых ссылок игнорируют, а скан
+              лежит на домене API. Значит файл откроется в новой вкладке, и уже
+              оттуда его сохраняют. Принудительное скачивание — это заголовок
+              Content-Disposition со стороны бэкенда, здесь его не подделать.
+            -->
+            <a
+              :href="scanUrl"
+              download
+              target="_blank"
+              rel="noopener"
+              class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
+            >
+              <AppIcon
+                name="file"
+                :size="16"
+              />
+              Скачать
+              <AppIcon
+                name="external"
+                :size="14"
+                class="text-muted"
+              />
+            </a>
+          </template>
+        </section>
+
+        <!-- Видео -->
+        <section v-else-if="tab === 'video'">
+          <EmptyState
+            v-if="!video"
+            icon="play"
+            :title="game.status === 'scheduled' ? 'Трансляция не назначена' : 'Видеозапись не привязана'"
+            hint="Ссылку на видео добавляют вручную, и не у каждого матча она есть."
+          />
+
+          <!-- Плеер монтируется только на своей вкладке: на остальных разделах
+               iframe в разметку не попадает и трафик не тратит. -->
+          <div
+            v-else-if="video.embed"
+            class="mx-auto w-full max-w-4xl"
+          >
+            <div class="aspect-video w-full overflow-hidden rounded-xl bg-black">
+              <iframe
+                :src="video.embed"
+                :title="sectionTitle"
+                class="h-full w-full border-0"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock"
+                allowfullscreen
+              />
+            </div>
           </div>
 
-          <!--
-            Атрибут download браузеры для межсайтовых ссылок игнорируют, а скан
-            лежит на домене API. Значит файл откроется в новой вкладке, и уже
-            оттуда его сохраняют. Принудительное скачивание — это заголовок
-            Content-Disposition со стороны бэкенда, здесь его не подделать.
-          -->
+          <!-- Хост не из белого списка — встроить нельзя, отдаём ссылкой -->
           <a
-            :href="scanUrl"
-            download
+            v-else
+            :href="video.href"
             target="_blank"
             rel="noopener"
-            class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
+            class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
           >
             <AppIcon
-              name="file"
+              name="play"
               :size="16"
             />
-            Скачать
+            Смотреть на сайте видео
             <AppIcon
               name="external"
               :size="14"
               class="text-muted"
             />
           </a>
-        </template>
-      </section>
-
-      <!-- Видео -->
-      <section v-else-if="tab === 'video'">
-        <EmptyState
-          v-if="!video"
-          icon="play"
-          :title="game.status === 'scheduled' ? 'Трансляция не назначена' : 'Видеозапись не привязана'"
-          hint="Ссылку на видео добавляют вручную, и не у каждого матча она есть."
-        />
-
-        <!-- Плеер монтируется только на своей вкладке: на остальных разделах
-             iframe в разметку не попадает и трафик не тратит. -->
-        <div
-          v-else-if="video.embed"
-          class="mx-auto w-full max-w-4xl"
-        >
-          <div class="aspect-video w-full overflow-hidden rounded-xl bg-black">
-            <iframe
-              :src="video.embed"
-              :title="sectionTitle"
-              class="h-full w-full border-0"
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock"
-              allowfullscreen
-            />
-          </div>
-        </div>
-
-        <!-- Хост не из белого списка — встроить нельзя, отдаём ссылкой -->
-        <a
-          v-else
-          :href="video.href"
-          target="_blank"
-          rel="noopener"
-          class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-rule text-sm font-semibold"
-        >
-          <AppIcon
-            name="play"
-            :size="16"
-          />
-          Смотреть на сайте видео
-          <AppIcon
-            name="external"
-            :size="14"
-            class="text-muted"
-          />
-        </a>
-      </section>
+        </section>
+      </Transition>
     </div>
   </div>
 </template>

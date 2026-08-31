@@ -49,6 +49,14 @@ export default defineNuxtConfig({
   },
 
   app: {
+    /**
+     * Переход между страницами. Имя совпадает с классами .page-* в main.css.
+     *
+     * out-in, а не одновременно: при пересечении на экране жили бы две
+     * страницы сразу, и высота прыгала бы посреди анимации.
+     */
+    pageTransition: { name: 'page', mode: 'out-in' },
+
     head: {
       htmlAttrs: { lang: 'ru' },
       titleTemplate: '%s · Время звёзд',

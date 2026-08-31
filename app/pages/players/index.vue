@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Page, Player } from '#shared/types/api'
-import type { LocationQueryRaw } from 'vue-router'
 import { ep } from '#shared/utils/endpoints'
 
 /** search — подстрока по ФИО. Сортировка серверная, по ФИО. */
@@ -21,22 +20,8 @@ const { data, status, error, refresh } = await usePageData(
 
 const pages = computed(() => (data.value ? Math.ceil(data.value.total / data.value.size) : 0))
 
-/**
- * Вид списка — в адресе, как и остальные переключатели проекта: выбор
- * переживает переход на другую страницу пагинации и «назад».
- *
- * По умолчанию список: он плотнее, а половина игроков без фотографии, и
- * плитка из монограмм выглядит пустее, чем строки.
- */
-const view = computed<'list' | 'cards'>(() => (route.query.view === 'cards' ? 'cards' : 'list'))
-
-function viewLink(next: 'list' | 'cards') {
-  const query: LocationQueryRaw = { ...route.query }
-  // Список — состояние по умолчанию, в адрес его не пишем
-  if (next === 'cards') query.view = next
-  else delete query.view
-  return { path: route.path, query }
-}
+// Вид и его запоминание — в общем композабле: то же самое нужно командам
+const { view, link: viewLink } = useListView('players')
 
 useHead({ title: 'Игроки' })
 useSeoMeta({
@@ -105,73 +90,80 @@ useSeoMeta({
         </div>
       </div>
 
-      <!-- Плитка: крупное фото, имя, амплуа -->
-      <ul
-        v-if="view === 'cards'"
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+      <!-- Смена вида: анимируем контейнер, а не карточки. У карточек
+           висит .reveal, а CSS-анимация перебивает transition. -->
+      <Transition
+        name="swap"
+        mode="out-in"
       >
-        <li
-          v-for="p in data.items"
-          :key="p.id"
+        <!-- Плитка: крупное фото, имя, амплуа -->
+        <ul
+          v-if="view === 'cards'"
+          class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
         >
-          <NuxtLink
-            :to="playerPath(p)"
-            class="reveal flex h-full flex-col items-center gap-2 rounded-xl border border-rule bg-surface p-4 text-center transition-colors hover:border-rule-strong"
+          <li
+            v-for="p in data.items"
+            :key="p.id"
           >
-            <PlayerAvatar
-              :player="p"
-              :size="96"
-            />
-            <span class="mt-1 line-clamp-2 font-semibold">{{ p.full_name }}</span>
-            <span
-              v-if="p.position"
-              class="text-xs text-muted"
-            >{{ p.position }}</span>
-            <span
-              v-if="age(p.birth_date) != null"
-              class="mt-auto text-xs text-muted"
-            >{{ pluralWith(age(p.birth_date)!, ['год', 'года', 'лет']) }}</span>
-          </NuxtLink>
-        </li>
-      </ul>
-
-      <ul
-        v-else
-        class="space-y-2"
-      >
-        <li
-          v-for="p in data.items"
-          :key="p.id"
-        >
-          <NuxtLink
-            :to="playerPath(p)"
-            class="reveal flex items-center gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
-          >
-            <PlayerAvatar
-              :player="p"
-              :size="40"
-            />
-            <span class="min-w-0 flex-1">
-              <span class="block truncate font-semibold">{{ p.full_name }}</span>
+            <NuxtLink
+              :to="playerPath(p)"
+              class="reveal flex h-full flex-col items-center gap-2 rounded-xl border border-rule bg-surface p-4 text-center transition-colors hover:border-rule-strong"
+            >
+              <PlayerAvatar
+                :player="p"
+                :size="96"
+              />
+              <span class="mt-1 line-clamp-2 font-semibold">{{ p.full_name }}</span>
               <span
-                v-if="p.position || age(p.birth_date) != null"
-                class="block truncate text-xs text-muted"
-              >
-                <template v-if="p.position">{{ p.position }}</template>
-                <template v-if="p.position && age(p.birth_date) != null"> · </template>
-                <template v-if="age(p.birth_date) != null">
-                  {{ pluralWith(age(p.birth_date)!, ['год', 'года', 'лет']) }}
-                </template>
+                v-if="p.position"
+                class="text-xs text-muted"
+              >{{ p.position }}</span>
+              <span
+                v-if="age(p.birth_date) != null"
+                class="mt-auto text-xs text-muted"
+              >{{ pluralWith(age(p.birth_date)!, ['год', 'года', 'лет']) }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+
+        <ul
+          v-else
+          class="space-y-2"
+        >
+          <li
+            v-for="p in data.items"
+            :key="p.id"
+          >
+            <NuxtLink
+              :to="playerPath(p)"
+              class="reveal flex items-center gap-3 rounded-xl border border-rule bg-surface p-3 transition-colors hover:border-rule-strong"
+            >
+              <PlayerAvatar
+                :player="p"
+                :size="40"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold">{{ p.full_name }}</span>
+                <span
+                  v-if="p.position || age(p.birth_date) != null"
+                  class="block truncate text-xs text-muted"
+                >
+                  <template v-if="p.position">{{ p.position }}</template>
+                  <template v-if="p.position && age(p.birth_date) != null"> · </template>
+                  <template v-if="age(p.birth_date) != null">
+                    {{ pluralWith(age(p.birth_date)!, ['год', 'года', 'лет']) }}
+                  </template>
+                </span>
               </span>
-            </span>
-            <AppIcon
-              name="chevronRight"
-              :size="18"
-              class="shrink-0 text-muted"
-            />
-          </NuxtLink>
-        </li>
-      </ul>
+              <AppIcon
+                name="chevronRight"
+                :size="18"
+                class="shrink-0 text-muted"
+              />
+            </NuxtLink>
+          </li>
+        </ul>
+      </Transition>
 
       <PagerNav
         v-if="pages > 1"

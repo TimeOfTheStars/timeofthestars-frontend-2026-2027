@@ -211,94 +211,101 @@ useSeoMeta({
       </div>
 
       <!-- Таблица -->
-      <section v-if="tab === 'standings'">
-        <StandingsTable
-          :rows="data!.standings"
-          :highlight-team-id="myTeamId"
-        />
-      </section>
-
-      <!-- Календарь и результаты -->
-      <section v-else-if="tab === 'schedule'">
-        <div v-if="upcoming.length">
-          <h3 class="mb-2 text-sm font-bold">
-            Предстоящие матчи
-          </h3>
-          <GameList
-            :games="upcoming"
-            show-stage
+      <!-- Переход между разделами: сдвиг вбок читается как свайп -->
+      <Transition
+        name="pane"
+        mode="out-in"
+      >
+        <section v-if="tab === 'standings'">
+          <StandingsTable
+            :rows="data!.standings"
+            :highlight-team-id="myTeamId"
           />
-        </div>
+        </section>
 
-        <div :class="upcoming.length > 0 && 'mt-8'">
-          <h3 class="mb-2 text-sm font-bold">
-            Результаты
-          </h3>
-          <GameList
-            :games="played"
-            show-stage
-            empty-title="Сыгранных матчей пока нет"
-            empty-hint="Результаты появятся, когда организаторы внесут счёт."
-          />
-        </div>
-      </section>
-
-      <!-- Составы -->
-      <section v-else-if="tab === 'roster'">
-        <!--
-          Переключатель команд, как на странице матча. Раньше составы шли
-          стопкой, и до последней команды приходилось листать полторы сотни
-          строк. Команд в турнире больше двух, поэтому не две равные половины,
-          а строка фишек с горизонтальной прокруткой на узком экране.
-        -->
-        <div
-          v-if="rosterTeams.length > 1"
-          class="table-bleed mb-4 overflow-x-auto sm:overflow-visible"
-          role="group"
-          aria-label="Команда"
-        >
-          <div class="flex min-w-max gap-1.5 px-4 sm:min-w-0 sm:flex-wrap sm:px-0">
-            <NuxtLink
-              v-for="id in rosterTeams"
-              :key="id"
-              :to="rosterTeamLink(id)"
-              replace
-              class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-bold whitespace-nowrap transition-colors"
-              :class="rosterTeam === id
-                ? 'border-accent bg-accent text-accent-fg'
-                : 'border-rule text-muted hover:text-fg'"
-              :aria-current="rosterTeam === id ? 'true' : undefined"
-            >
-              <TeamCrest
-                :team-id="id"
-                :size="22"
-              />
-              {{ team(id)?.name ?? `Команда №${id}` }}
-            </NuxtLink>
+        <!-- Календарь и результаты -->
+        <section v-else-if="tab === 'schedule'">
+          <div v-if="upcoming.length">
+            <h3 class="mb-2 text-sm font-bold">
+              Предстоящие матчи
+            </h3>
+            <GameList
+              :games="upcoming"
+              show-stage
+            />
           </div>
-        </div>
 
-        <RosterTable
-          :players="data!.roster"
-          :team-id="rosterTeam"
-        />
-      </section>
+          <div :class="upcoming.length > 0 && 'mt-8'">
+            <h3 class="mb-2 text-sm font-bold">
+              Результаты
+            </h3>
+            <GameList
+              :games="played"
+              show-stage
+              empty-title="Сыгранных матчей пока нет"
+              empty-hint="Результаты появятся, когда организаторы внесут счёт."
+            />
+          </div>
+        </section>
 
-      <!-- Лучшие игроки -->
-      <section v-else-if="tab === 'best'">
-        <BestPlayersList
-          :players="data!.best"
-          :roster="data!.roster"
-        />
-      </section>
+        <!-- Составы -->
+        <section v-else-if="tab === 'roster'">
+          <!--
+            Переключатель команд, как на странице матча. Раньше составы шли
+            стопкой, и до последней команды приходилось листать полторы сотни
+            строк. Команд в турнире больше двух, поэтому не две равные половины,
+            а строка фишек с горизонтальной прокруткой на узком экране.
+          -->
+          <div
+            v-if="rosterTeams.length > 1"
+            class="table-bleed mb-4 overflow-x-auto sm:overflow-visible"
+            role="group"
+            aria-label="Команда"
+          >
+            <div class="flex min-w-max gap-1.5 px-4 sm:min-w-0 sm:flex-wrap sm:px-0">
+              <NuxtLink
+                v-for="id in rosterTeams"
+                :key="id"
+                :to="rosterTeamLink(id)"
+                replace
+                class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-bold whitespace-nowrap transition-colors"
+                :class="rosterTeam === id
+                  ? 'border-accent bg-accent text-accent-fg'
+                  : 'border-rule text-muted hover:text-fg'"
+                :aria-current="rosterTeam === id ? 'true' : undefined"
+              >
+                <TeamCrest
+                  :team-id="id"
+                  :size="22"
+                />
+                {{ team(id)?.name ?? `Команда №${id}` }}
+              </NuxtLink>
+            </div>
+          </div>
 
-      <!-- Сетка плей-офф -->
-      <section v-else-if="tab === 'playoff'">
-        <PlayoffBracket
-          :games="playoffGames"
-          :winner-team-id="competition.winner_team_id"
-        />
-      </section>
+          <RosterTable
+            :players="data!.roster"
+            :team-id="rosterTeam"
+          />
+        </section>
+
+        <!-- Лучшие игроки -->
+        <section v-else-if="tab === 'best'">
+          <BestPlayersList
+            :players="data!.best"
+            :roster="data!.roster"
+          />
+        </section>
+
+        <!-- Сетка плей-офф -->
+        <section v-else-if="tab === 'playoff'">
+          <PlayoffBracket
+            :games="playoffGames"
+            :winner-team-id="competition.winner_team_id"
+          />
+        </section>
+      </Transition>
+
     </template>
 
     <!-- Запрос упал и показать нечего -->

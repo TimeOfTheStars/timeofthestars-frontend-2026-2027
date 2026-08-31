@@ -19,6 +19,7 @@ const { data, status, error, refresh } = await usePageData(
 )
 
 const { myTeamId } = useMyTeam()
+const { view, link: viewLink } = useListView('teams')
 const pages = computed(() => (data.value ? Math.ceil(data.value.total / data.value.size) : 0))
 
 useHead({ title: 'Команды' })
@@ -53,46 +54,121 @@ useSeoMeta({
     />
 
     <template v-else-if="data?.items.length">
-      <p class="mb-2 text-xs text-muted">
-        {{ pluralWith(data.total, ['команда', 'команды', 'команд']) }}
-      </p>
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-muted">
+          {{ pluralWith(data.total, ['команда', 'команды', 'команд']) }}
+        </p>
 
-      <ul class="space-y-2">
-        <li
-          v-for="t in data.items"
-          :key="t.id"
+        <!-- Вид списка. Ссылками, а не кнопками: выбор попадает в адрес и
+             сохраняется при переходе по страницам, а useListView вдобавок
+             запоминает его в localStorage. -->
+        <div
+          class="flex gap-1 rounded-lg border border-rule p-1"
+          role="group"
+          aria-label="Вид списка"
         >
           <NuxtLink
-            :to="teamPath(t)"
-            class="reveal flex items-center gap-3 rounded-xl border bg-surface p-3 transition-colors"
-            :class="t.id === myTeamId ? 'border-accent' : 'border-rule hover:border-rule-strong'"
+            v-for="opt in [
+              { key: 'list', icon: 'list', label: 'Списком' },
+              { key: 'cards', icon: 'grid', label: 'Плиткой' },
+            ]"
+            :key="opt.key"
+            :to="viewLink(opt.key as 'list' | 'cards')"
+            replace
+            class="flex size-9 items-center justify-center rounded-md transition-colors"
+            :class="view === opt.key ? 'bg-accent text-accent-fg' : 'text-muted hover:text-fg'"
+            :aria-label="opt.label"
+            :aria-current="view === opt.key ? 'true' : undefined"
           >
-            <TeamCrest
-              :team="t"
-              :size="40"
-            />
-            <span class="min-w-0 flex-1">
-              <span class="block truncate font-semibold">{{ t.name }}</span>
-              <span
-                v-if="t.city"
-                class="block truncate text-xs text-muted"
-              >{{ t.city }}</span>
-            </span>
-            <AppChip
-              v-if="t.id === myTeamId"
-              size="sm"
-              variant="accent"
-            >
-              Моя
-            </AppChip>
             <AppIcon
-              name="chevronRight"
-              :size="18"
-              class="shrink-0 text-muted"
+              :name="opt.icon"
+              :size="17"
             />
           </NuxtLink>
-        </li>
-      </ul>
+        </div>
+      </div>
+
+      <!-- Смена вида: анимируем контейнер, а не карточки. У карточек
+           висит .reveal, а CSS-анимация перебивает transition. -->
+      <Transition
+        name="swap"
+        mode="out-in"
+      >
+        <!-- Плитка: крупный герб, название, город -->
+        <ul
+          v-if="view === 'cards'"
+          class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+        >
+          <li
+            v-for="t in data.items"
+            :key="t.id"
+          >
+            <NuxtLink
+              :to="teamPath(t)"
+              class="reveal flex h-full flex-col items-center gap-2 rounded-xl border bg-surface p-4 text-center transition-colors"
+              :class="t.id === myTeamId ? 'border-accent' : 'border-rule hover:border-rule-strong'"
+            >
+              <TeamCrest
+                :team="t"
+                :size="72"
+              />
+              <span class="mt-1 line-clamp-2 font-semibold">{{ t.name }}</span>
+              <span
+                v-if="t.city"
+                class="text-xs text-muted"
+              >{{ t.city }}</span>
+              <AppChip
+                v-if="t.id === myTeamId"
+                size="sm"
+                variant="accent"
+                class="mt-auto"
+              >
+                Моя
+              </AppChip>
+            </NuxtLink>
+          </li>
+        </ul>
+
+        <ul
+          v-else
+          class="space-y-2"
+        >
+          <li
+            v-for="t in data.items"
+            :key="t.id"
+          >
+            <NuxtLink
+              :to="teamPath(t)"
+              class="reveal flex items-center gap-3 rounded-xl border bg-surface p-3 transition-colors"
+              :class="t.id === myTeamId ? 'border-accent' : 'border-rule hover:border-rule-strong'"
+            >
+              <TeamCrest
+                :team="t"
+                :size="40"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold">{{ t.name }}</span>
+                <span
+                  v-if="t.city"
+                  class="block truncate text-xs text-muted"
+                >{{ t.city }}</span>
+              </span>
+              <AppChip
+                v-if="t.id === myTeamId"
+                size="sm"
+                variant="accent"
+              >
+                Моя
+              </AppChip>
+              <AppIcon
+                name="chevronRight"
+                :size="18"
+                class="shrink-0 text-muted"
+              />
+            </NuxtLink>
+          </li>
+        </ul>
+      </Transition>
 
       <PagerNav
         v-if="pages > 1"
