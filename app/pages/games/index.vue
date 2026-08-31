@@ -207,12 +207,18 @@ useSeoMeta({
       />
 
       <!-- Календарь строится из тех же отфильтрованных матчей, что и список -->
-      <MonthCalendar
-        v-else-if="view === 'calendar'"
-        :grid="month"
-        :day="selectedDay"
-        :today="data.today"
-      />
+      <template v-else-if="view === 'calendar'">
+        <MonthCalendar
+          :grid="month"
+          :day="selectedDay"
+          :today="data.today"
+        />
+        <CalendarSubscribe
+          :competition="filters.competition"
+          :type="filters.type"
+          class="mt-6"
+        />
+      </template>
 
       <template v-else>
         <!-- Порядок блоков задаёт фильтр «Сначала». Каждый блок рисуется
