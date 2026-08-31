@@ -1,21 +1,45 @@
 <script setup lang="ts">
 /**
  * Нижняя панель — главный способ навигации на телефоне: один тап до любого
- * счёта из любого места. Четыре пункта, подписи 11px (не 10 — на вытянутой
- * руке в полутёмном зале это уже неразборчиво), тач-таргеты 56px.
+ * счёта из любого места. Пять пунктов, подписи 11px, тач-таргеты 56px.
  *
- * Никакого backdrop-filter: на среднем Android это измеримая просадка скролла
- * на списке из 200 матчей, а пользы ноль.
+ * Ниже 360px подписи убираются и остаются одни иконки: там под самую широкую
+ * подпись остаётся 6px запаса против 14px на 360px (промер по шрифту — см.
+ * nav.ts). Скрываются они ВИЗУАЛЬНО, но не для скринридера: текст ссылки и
+ * есть её доступное имя, иначе в панели окажутся пять безымянных кнопок.
+ *
+ * Стекло — только на устройствах Apple. Прежний запрет звучал так: «никакого
+ * backdrop-filter: на среднем Android это измеримая просадка скролла на
+ * списке из 200 матчей». Запрет остаётся в силе именно для Android, а панель
+ * тут худший случай: фиксированный слой поверх длинного списка пересчитывает
+ * размытие каждый кадр.
+ *
+ * User-Agent — это ДОГАДКА о производительности, а не она сама: флагманский
+ * Android потянет размытие лучше старого iPhone. Но исходный замер говорил
+ * именно про средний Android, поэтому разделение по вендору бьёт примерно
+ * туда, куда нужно.
+ *
+ * Проверка на клиенте, а не на сервере, и это не каприз: в проде все страницы
+ * кешируются на 15 секунд и HTML общий для всех, так что серверная ветка по
+ * User-Agent означала бы, что первый зашедший решает за следующих.
  */
 const route = useRoute()
+
+const glass = ref(false)
+
+onMounted(() => {
+  // iPadOS 13+ представляется как Macintosh, поэтому проверяем и его
+  glass.value = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)
+})
 </script>
 
 <template>
   <nav
-    class="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-bg pb-[env(safe-area-inset-bottom)] lg:hidden"
+    class="fixed inset-x-0 bottom-0 z-30 border-t border-rule pb-[env(safe-area-inset-bottom)] lg:hidden"
+    :class="glass ? 'nav-glass' : 'bg-bg'"
     aria-label="Основная навигация"
   >
-    <ul class="grid grid-cols-4">
+    <ul class="grid grid-cols-5">
       <li
         v-for="item in PRIMARY_NAV"
         :key="item.to"
@@ -31,7 +55,9 @@ const route = useRoute()
             :size="22"
             :weight="isNavActive(item, route.path) ? 2.25 : 1.75"
           />
-          <span class="text-[11px] leading-none font-semibold">{{ item.label }}</span>
+          <span class="sr-only text-[11px] leading-none font-semibold xs:not-sr-only">
+            {{ item.label }}
+          </span>
         </NuxtLink>
       </li>
     </ul>

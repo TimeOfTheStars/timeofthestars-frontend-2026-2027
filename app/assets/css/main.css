@@ -72,6 +72,11 @@
 
   --font-sans: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  /* Узкий телефон. Ниже этой ширины в нижней панели не остаётся запаса под
+     пятую подпись: на 320px под текст 56px при самой широкой подписи 49.8px.
+     Своей точки на 360px в Tailwind нет, ближайшая sm — это уже 640px. */
+  --breakpoint-xs: 22.5rem;
+
   /* высота липкой шапки — от неё считаются все sticky top-* */
   --spacing-header: 3.5rem;
 }
@@ -382,6 +387,66 @@
     opacity: 0;
   }
 
+
+  /*
+    Стекло нижней панели. Класс вешается только на устройствах Apple —
+    почему именно так, подробно в AppBottomNav.vue.
+
+    Блик по верхней кромке обязателен: без него это просто мутный слой.
+    Стекло читается именно по светлой линии на границе — так же, как у
+    системных панелей iOS.
+  */
+  .nav-glass {
+    background: color-mix(in oklab, var(--bg) 72%, transparent);
+    position: relative;
+  }
+
+  .nav-glass::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-fg) 22%, transparent),
+      transparent
+    );
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .nav-glass {
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+  }
+
+  /*
+    Без поддержки размытия полупрозрачный фон только вредит: подписи поплывут
+    по контенту под ними. Возвращаем непрозрачный.
+  */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .nav-glass {
+      background: var(--bg);
+    }
+  }
+
+  /*
+    «Уменьшить прозрачность» в системе включают ровно затем, чтобы такого не
+    было. Уважаем и на iOS, и на macOS.
+  */
+  @media (prefers-reduced-transparency: reduce) {
+    .nav-glass {
+      background: var(--bg);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .nav-glass::before {
+      display: none;
+    }
+  }
 
   /* Полоса прокрутки у карусели скрыта, сама прокрутка остаётся */
   .no-scrollbar {
