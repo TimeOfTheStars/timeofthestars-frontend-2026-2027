@@ -62,11 +62,17 @@ export function useListView(key: string) {
     { immediate: true },
   )
 
-  /** Ссылка на другой вид. Список — состояние по умолчанию, в адрес не пишем. */
+  /**
+   * Ссылка на другой вид. Параметр пишем ВСЕГДА, включая список.
+   *
+   * Сначала я его для списка удалял, чтобы не копить мусор в адресе, — и это
+   * ломало возврат к списку. Отсутствие параметра означало сразу две разные
+   * вещи: «не выбирал, возьми запомненное» и «выбрал список». У посетителя с
+   * запомненной плиткой кнопка «списком» вела на адрес без параметра, оттуда
+   * снова поднималась плитка, и вид не менялся.
+   */
   function link(next: ListView) {
-    const query: LocationQueryRaw = { ...route.query }
-    if (next === 'cards') query.view = next
-    else delete query.view
+    const query: LocationQueryRaw = { ...route.query, view: next }
     return { path: route.path, query }
   }
 
