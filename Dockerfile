@@ -24,6 +24,13 @@ RUN npm run build
 # В образ едет только .output (~4 МБ). node_modules сборки остаются позади.
 FROM node:24-alpine AS runtime
 WORKDIR /app
+
+# tzdata обязателен. В alpine базы часовых поясов нет вовсе, поэтому
+# TZ=Europe/Moscow из compose молча ничего не делал: контейнер оставался в
+# UTC, и «сегодня» на сервере с 21:00 до полуночи было вчерашним днём.
+# Проверено на проде: TZ выставлена, а date показывал UTC.
+RUN apk add --no-cache tzdata
+
 ENV NODE_ENV=production \
     NITRO_HOST=0.0.0.0 \
     NITRO_PORT=3000
