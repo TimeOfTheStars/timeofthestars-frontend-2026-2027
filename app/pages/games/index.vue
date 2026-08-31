@@ -36,13 +36,45 @@ const { data, status, error, refresh } = await usePageData(
       ),
     )
 
-    return { competitions: comps.items, games: perCompetition.flat() }
+    // «Сегодня» считаем ОДИН раз и увозим в payload: клиент возьмёт то же
+    // значение, и подсветка текущего дня не разойдётся при гидратации.
+    return { competitions: comps.items, games: perCompetition.flat(), today: todayIso() }
   },
 )
 
 const calendar = computed(() =>
   buildCalendar(data.value?.games ?? [], data.value?.competitions ?? [], filters.value),
 )
+
+const view = computed<'list' | 'calendar'>(() =>
+  route.query.view === 'calendar' ? 'calendar' : 'list',
+)
+
+const viewSegments = [
+  { key: 'list', label: 'Список' },
+  { key: 'calendar', label: 'Календарь' },
+]
+
+/**
+ * Сетка месяца строится из тех же отфильтрованных матчей, что и список, —
+ * фильтры действуют на оба вида.
+ *
+ * Месяц по умолчанию — тот, в котором «сегодня». Само «сегодня» приезжает из
+ * payload: если брать его на клиенте отдельно, сервер и браузер в разных
+ * поясах дадут разные даты и разметка разойдётся при гидратации.
+ */
+const month = computed(() =>
+  buildMonth(
+    String(route.query.month ?? ''),
+    filterGames(data.value?.games ?? [], data.value?.competitions ?? [], filters.value),
+    data.value?.today ?? '',
+  ),
+)
+
+const selectedDay = computed(() => {
+  const d = String(route.query.day ?? '')
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null
+})
 
 /** Название соревнования для ярлыка на карточке — в Game его нет. */
 const competitionName = computed(() => {
@@ -125,6 +157,14 @@ useSeoMeta({
       Матчи
     </h1>
 
+    <!-- Вид ссылками: фильтры и месяц остаются в адресе при переключении -->
+    <SegmentLinks
+      :items="viewSegments"
+      :current="view"
+      param="view"
+      class="mb-4"
+    />
+
     <StaleNotice
       v-if="error && data"
       :pending="status === 'pending'"
@@ -164,6 +204,14 @@ useSeoMeta({
         icon="calendar"
         title="Под эти фильтры матчей нет"
         hint="Попробуйте снять ограничение по типу соревнования или статусу."
+      />
+
+      <!-- Календарь строится из тех же отфильтрованных матчей, что и список -->
+      <MonthCalendar
+        v-else-if="view === 'calendar'"
+        :grid="month"
+        :day="selectedDay"
+        :today="data.today"
       />
 
       <template v-else>

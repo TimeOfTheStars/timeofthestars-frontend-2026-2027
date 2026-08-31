@@ -5,6 +5,11 @@ services:
     environment:
       NUXT_PUBLIC_API_BASE: https://api.timeofthestars.ru
       NUXT_PUBLIC_SITE_URL: https://timeofthestars.ru
+      # Контейнер по умолчанию живёт в UTC, а лига московская. Без этого
+      # «сегодня» на сервере с 21:00 до полуночи по Москве — вчерашний день:
+      # календарь подсвечивал бы не то число, а pickCurrentCompetition на
+      # границе суток выбирал не то соревнование.
+      TZ: Europe/Moscow
       # SWR-кеш Nitro по умолчанию без вытеснения. На машине с 2 ГБ
       # потолок кучи заставляет GC чистить кеш, а не расти до OOM.
       NODE_OPTIONS: --max-old-space-size=640

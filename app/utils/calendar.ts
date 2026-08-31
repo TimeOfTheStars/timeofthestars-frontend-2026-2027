@@ -84,19 +84,32 @@ export interface Calendar {
   isEmpty: boolean
 }
 
-export function buildCalendar(
+/**
+ * Отбор матчей по фильтрам. Вынесен отдельно, потому что нужен двум видам —
+ * списку и календарю. Дублировать условия нельзя: разойдутся при следующей
+ * правке фильтров.
+ */
+export function filterGames(
   games: Game[],
   competitions: Competition[],
   filters: CalendarFilters,
-): Calendar {
+): Game[] {
   const byId = new Map(competitions.map(c => [c.id, c]))
 
-  const filtered = games.filter((g) => {
+  return games.filter((g) => {
     if (filters.competition != null && g.competition_id !== filters.competition) return false
     if (filters.type != null && byId.get(g.competition_id)?.type !== filters.type) return false
     if (filters.status != null && g.status !== filters.status) return false
     return true
   })
+}
+
+export function buildCalendar(
+  games: Game[],
+  competitions: Competition[],
+  filters: CalendarFilters,
+): Calendar {
+  const filtered = filterGames(games, competitions, filters)
 
   const { played, upcoming } = splitGames(filtered)
 
