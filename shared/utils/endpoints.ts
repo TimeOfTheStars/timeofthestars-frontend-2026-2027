@@ -35,6 +35,8 @@ export const ep = {
   player: (id: number) => `${V1}/players/${id}`,
   playerStats: (id: number) => `${V1}/players/${id}/stats`,
   playerGames: (id: number) => `${V1}/players/${id}/games`,
+  /** голы игрока, у которых проставлен момент в записи матча */
+  playerGoalMoments: (id: number) => `${V1}/players/${id}/goal-moments`,
 } as const
 
 /** Матчи команды — обе стороны. Единственный законный способ дёрнуть /games. */

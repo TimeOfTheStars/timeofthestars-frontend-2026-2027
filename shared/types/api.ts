@@ -227,6 +227,48 @@ export interface GameEvent {
 }
 
 /**
+ * Гол игрока с таймкодом в записи матча — `GET /players/{id}/goal-moments`.
+ *
+ * Это ПРОЕКЦИЯ события хронологии, а не сам `GameEvent`: соревнование,
+ * соперник и счёт уже развёрнуты, ходить за ними отдельно не нужно.
+ *
+ * Голы БЕЗ таймкода в выдачу не попадают, поэтому длина списка — это не число
+ * голов игрока. Голы целиком считает `PlayerStatTotals.goals`.
+ */
+export interface PlayerGoalMoment {
+  /** id события в хронологии матча; годится как ключ списка */
+  event_id: number
+  game_id: number
+  type: Extract<GameEventType, 'goal' | 'shootout_goal'>
+  /** 1–3, 4 — овертайм, null у буллита */
+  period: number | null
+  /** СКВОЗНОЕ игровое время, как в GameEvent: 2505 — это 41:45 */
+  time_seconds: number
+  /**
+   * ДРУГОЕ число: смещение в записи. 4095 — это 1:08:15, а не «68:15».
+   * Форматировать его как игровое время нельзя.
+   */
+  video_seconds: number
+  /** запись матча целиком; без видео записи в выдачу не попадают */
+  video_url: string
+  /** готовая ссылка на момент — берём как есть, сами не собираем */
+  video_at_url: string
+  /** YYYY-MM-DD */
+  date: string
+  competition_id: number
+  competition_name: string
+  /** команда, за которую забит гол */
+  team: Team
+  opponent: Team
+  /** счёт уже со стороны команды игрока; null у матча без счёта */
+  score_for: number | null
+  score_against: number | null
+  /** передачи бывают пустыми и у настоящего гола — в протоколе их не записали */
+  assist1: Player | null
+  assist2: Player | null
+}
+
+/**
  * Командная статистика матча: та самая карточка «итоги матча» с бросками,
  * вбрасываниями и реализацией.
  *

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Game, Player, PlayerStatsBreakdown } from '#shared/types/api'
+import type { Game, Player, PlayerGoalMoment, PlayerStatsBreakdown } from '#shared/types/api'
 import { ep } from '#shared/utils/endpoints'
 
 /**
@@ -21,12 +21,16 @@ const id = computed(() => parseId(route.params.id)!)
 const { data, status, error, refresh } = await usePageData(
   () => `player:${id.value}`,
   async ($api) => {
-    const [player, stats, games] = await Promise.all([
+    const [player, stats, games, moments] = await Promise.all([
       $api<Player>(ep.player(id.value)),
       $api<PlayerStatsBreakdown>(ep.playerStats(id.value)),
       $api<Game[]>(ep.playerGames(id.value)),
+      // Моменты — дополнение к карточке, и падать из-за них она не должна.
+      // catch висит на самом запросе, а не вокруг Promise.all: all срывается
+      // на первом отказе и унёс бы заодно игрока, статистику и матчи.
+      $api<PlayerGoalMoment[]>(ep.playerGoalMoments(id.value)).catch(() => [] as PlayerGoalMoment[]),
     ])
-    return { player, stats, games }
+    return { player, stats, games, moments }
   },
   { watch: [id] },
 )
@@ -288,6 +292,28 @@ useSeoMeta({
             </NuxtLink>
           </li>
         </ul>
+      </section>
+
+      <!--
+        Моменты голов. Таймкоды проставляют руками, и сейчас они есть у семи
+        игроков лиги — поэтому у блока нет ни заголовка-заглушки, ни
+        EmptyState: у остальных он просто не существует. Это сознательное
+        отступление от общего правила «пустому разделу — заглушка»: на
+        странице, где моментов нет и не предвидится, карточка «моментов нет»
+        была бы шумом.
+      -->
+      <section
+        v-if="data!.moments.length"
+        class="mb-8"
+      >
+        <h2 class="mb-1 text-lg font-bold">
+          Моменты
+        </h2>
+        <p class="mb-3 text-xs text-muted">
+          Голы, у которых указан момент в записи матча. Нажмите — видео
+          откроется здесь же, с нужной секунды.
+        </p>
+        <PlayerMoments :moments="data!.moments" />
       </section>
 
       <!-- Матчи -->

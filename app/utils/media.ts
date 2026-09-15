@@ -100,13 +100,49 @@ export function parseVideo(url: string | null | undefined): VideoRef | null {
 export function videoAt(videoUrl: string | null | undefined, seconds: number | null | undefined): string | null {
   if (!videoUrl || seconds == null) return null
 
+  return `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}t=${hms(seconds)}`
+}
+
+/**
+ * Смещение как `1h8m15s`.
+ *
+ * Формат общий для всех наших ссылок на момент, и в этом всё дело: так его
+ * пишет бэкенд в `video_at_url`, и так его надёжно разбирает VK. Свёрнутая
+ * форма без часов («68m15s») понимается через раз, поэтому часы обязательны.
+ */
+function hms(seconds: number): string {
   const total = Math.max(0, Math.trunc(seconds))
   const h = Math.floor(total / 3600)
   const m = Math.floor((total % 3600) / 60)
   const s = total % 60
-  const t = `${h ? `${h}h` : ''}${m ? `${m}m` : ''}${s}s`
+  return `${h ? `${h}h` : ''}${m ? `${m}m` : ''}${s}s`
+}
 
-  return `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}t=${t}`
+/**
+ * Плеер, который стартует с нужной секунды.
+ *
+ * `parseVideo` намеренно не трогаем: на вкладке «Видео» матча смещения нет,
+ * и лишний параметр там не нужен.
+ *
+ * Что VK понимает `t` именно во встроенном плеере — проверено по его же
+ * бандлу (`video_embed.isolated.js`): он читает `urlParams.get('t')` и
+ * разбирает и чистые секунды, и форму `\d+[hms]`.
+ *
+ * Но подтвердить, что перемотка случилась, страница не может: плеер живёт в
+ * чужом iframe и о своём состоянии молчит. Поэтому рядом с ним ВСЕГДА
+ * остаётся ссылка на `video_at_url` — она открывает момент на сайте VK.
+ */
+export function videoEmbedAt(
+  videoUrl: string | null | undefined,
+  seconds: number | null | undefined,
+): VideoRef | null {
+  const video = parseVideo(videoUrl)
+  if (!video?.embed || seconds == null) return video
+
+  return {
+    ...video,
+    embed: `${video.embed}${video.embed.includes('?') ? '&' : '?'}t=${hms(seconds)}`,
+  }
 }
 
 /** Скан протокола: PDF или картинка — от этого зависит способ показа. */
