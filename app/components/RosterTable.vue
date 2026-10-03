@@ -4,8 +4,9 @@ import type { CompetitionPlayerWithStats } from '#shared/types/api'
 /**
  * Состав со статистикой, сгруппированный по командам.
  *
- * Сервер уже отдал игроков в порядке team_id → number, поэтому группируем
- * потоком, не пересортировывая.
+ * Сервер отдаёт игроков в порядке team_id → number. После группировки
+ * сортируем каждый состав по очкам (голы + передачи), затем по голам.
+ * При равной статистике сохраняем исходный порядок игроков.
  *
  * На 375px видно: № · Игрок · И · Г · П · О. «Штр» появляется с sm.
  * Позиция — залитый бейдж-буква внутри ячейки имени (экономит ~40px против
@@ -34,6 +35,9 @@ const groups = computed(() => {
     const last = out[out.length - 1]
     if (last && last.teamId === p.team_id) last.players.push(p)
     else out.push({ teamId: p.team_id, players: [p] })
+  }
+  for (const group of out) {
+    group.players.sort((a, b) => b.points - a.points || b.goals - a.goals)
   }
   return out
 })
