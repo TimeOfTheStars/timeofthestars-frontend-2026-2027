@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import type { Competition, CompetitionPlayerWithStats, Game, Team } from '#shared/types/api'
+import type { Game, Team } from '#shared/types/api'
 import { ep, teamGamesQuery } from '#shared/utils/endpoints'
 
-/**
- * Страница команды. Отдельной ручки «всё о команде» нет — собираем из двух:
- * сама команда + её матчи. Соревнования выводим из матчей (ручки
- * «соревнования команды» в API тоже нет), а состав существует только
- * в контексте соревнования, поэтому берём составы нужных соревнований
- * и фильтруем по team_id.
- */
+/** Матчи и заявки команды загружаются независимо друг от друга. */
 const route = useRoute()
 
 definePageMeta({
@@ -20,29 +14,12 @@ const id = computed(() => parseId(route.params.id)!)
 const { data, status, error, refresh } = await usePageData(
   () => `team:${id.value}`,
   async ($api) => {
-    const [team, games] = await Promise.all([
+    const [team, games, rosters] = await Promise.all([
       $api<Team>(ep.team(id.value)),
       $api<Game[]>(ep.games, { query: teamGamesQuery(id.value) }),
+      loadTeamRosters($api, id.value),
     ])
-
-    // В каких соревнованиях команда играет — выводим из матчей
-    const compIds = [...new Set(games.map(g => g.competition_id))]
-
-    const [competitions, rosters] = await Promise.all([
-      Promise.all(compIds.map(cid => $api<Competition>(ep.competition(cid)))),
-      Promise.all(compIds.map(cid => $api<CompetitionPlayerWithStats[]>(ep.roster(cid)))),
-    ])
-
-    return {
-      team,
-      games,
-      competitions,
-      // состав этой команды по каждому соревнованию
-      rosters: compIds.map((cid, i) => ({
-        competition: competitions[i]!,
-        players: (rosters[i] ?? []).filter(p => p.team_id === id.value),
-      })).filter(r => r.players.length > 0),
-    }
+    return { team, games, rosters }
   },
   { watch: [id] },
 )

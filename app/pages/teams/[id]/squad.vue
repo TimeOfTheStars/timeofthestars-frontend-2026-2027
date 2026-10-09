@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Competition, CompetitionPlayerWithStats, Game, Team } from '#shared/types/api'
-import { ep, teamGamesQuery } from '#shared/utils/endpoints'
+import type { Team } from '#shared/types/api'
+import { ep } from '#shared/utils/endpoints'
 
 /**
  * Состав команды для печати.
@@ -32,28 +32,11 @@ definePageMeta({
 const { data, status, error, refresh } = await usePageData(
   () => `squad:${id.value}`,
   async ($api) => {
-    const [team, games] = await Promise.all([
+    const [team, rosters] = await Promise.all([
       $api<Team>(ep.team(id.value)),
-      $api<Game[]>(ep.games, { query: teamGamesQuery(id.value) }),
+      loadTeamRosters($api, id.value),
     ])
-
-    // Состав живёт в соревнованиях, а не у команды: берём те, где она играет.
-    const compIds = [...new Set(games.map(g => g.competition_id))]
-    const [competitions, rosters] = await Promise.all([
-      Promise.all(compIds.map(cid => $api<Competition>(ep.competition(cid)).catch(() => null))),
-      Promise.all(compIds.map(cid =>
-        $api<CompetitionPlayerWithStats[]>(ep.roster(cid)).catch(() => [] as CompetitionPlayerWithStats[]),
-      )),
-    ])
-
-    return {
-      team,
-      rosters: compIds.map((cid, i) => ({
-        competition: competitions[i] ?? null,
-        competitionId: cid,
-        players: (rosters[i] ?? []).filter(p => p.team_id === id.value),
-      })).filter(r => r.players.length > 0),
-    }
+    return { team, rosters }
   },
   { watch: [id] },
 )
