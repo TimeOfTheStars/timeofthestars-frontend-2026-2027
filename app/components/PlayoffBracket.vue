@@ -33,9 +33,9 @@ const cols = computed(() => bracket.value.groups.length)
 </script>
 
 <template>
-  <div v-if="bracket.groups.length">
+  <div v-if="bracket.groups.length || bracket.thirdPlace.length">
     <p
-      v-if="!bracket.canonical"
+      v-if="bracket.groups.length && !bracket.canonical"
       class="mb-4 flex items-start gap-2 rounded-xl border border-rule bg-surface-2 px-3 py-2.5 text-xs text-muted"
     >
       <AppIcon
@@ -89,6 +89,31 @@ const cols = computed(() => bracket.value.groups.length)
       </section>
     </div>
 
+    <section
+      v-if="bracket.thirdPlace.length"
+      :class="bracket.groups.length ? 'mt-6' : undefined"
+      aria-labelledby="bk-third_place"
+    >
+      <h3
+        id="bk-third_place"
+        class="sticky top-header z-10 -mx-4 mb-3 bg-bg px-4 py-1.5 text-xs font-bold text-muted lg:static lg:mx-0 lg:px-0"
+      >
+        {{ STAGE_LABEL.third_place }}
+      </h3>
+      <ol
+        class="space-y-3 lg:grid lg:gap-12 lg:space-y-0"
+        :style="cols > 1 ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined"
+      >
+        <li
+          v-for="tie in bracket.thirdPlace"
+          :key="tie.key"
+          class="bk-cell"
+        >
+          <BracketTie :tie="tie" />
+        </li>
+      </ol>
+    </section>
+
     <!-- Чемпион — только когда организаторы явно указали winner_team_id -->
     <NuxtLink
       v-if="champion"
@@ -115,6 +140,6 @@ const cols = computed(() => bracket.value.groups.length)
     v-else
     icon="calendar"
     title="Матчей плей-офф пока нет"
-    hint="Сетка появится, когда организаторы внесут матчи стадий 1/4, 1/2 или финала."
+    hint="Сетка появится, когда организаторы внесут матчи плей-офф."
   />
 </template>

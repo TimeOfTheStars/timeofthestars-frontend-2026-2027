@@ -43,6 +43,8 @@ export interface StageGroup {
 
 export interface Bracket {
   groups: StageGroup[]
+  /** Матчи за бронзу показываются отдельно от пути к финалу. */
+  thirdPlace: Tie[]
   /**
    * Сетка похожа на настоящее дерево: стадии идут подряд от финала и в каждой
    * ровно 2^глубина пар. Только в этом случае на десктопе включаются
@@ -121,7 +123,8 @@ export function buildBracket(games: Game[]): Bracket {
 
   return {
     groups,
-    canonical: isCanonical(groups, playoff),
+    thirdPlace: [...byKey.values()].filter(t => t.stage === 'third_place'),
+    canonical: isCanonical(groups, playoff.filter(g => g.stage !== 'third_place')),
     tieCount: byKey.size,
   }
 }

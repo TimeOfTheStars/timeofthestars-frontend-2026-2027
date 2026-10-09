@@ -155,6 +155,7 @@ export const STAGE_LABEL: Record<GameStage, string> = {
   quarterfinal: '1/4 финала',
   semifinal: '1/2 финала',
   final: 'Финал',
+  third_place: 'Матч за 3-е место',
 }
 
 export const STAGE_SHORT: Record<GameStage, string> = {
@@ -162,6 +163,7 @@ export const STAGE_SHORT: Record<GameStage, string> = {
   quarterfinal: '1/4',
   semifinal: '1/2',
   final: 'Финал',
+  third_place: 'За 3-е место',
 }
 
 /**

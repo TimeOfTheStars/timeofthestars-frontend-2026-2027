@@ -7,7 +7,7 @@
 // ─────────────────────────────── перечисления
 
 export type CompetitionType = 'championship' | 'tournament'
-export type GameStage = 'matches' | 'quarterfinal' | 'semifinal' | 'final'
+export type GameStage = 'matches' | 'quarterfinal' | 'semifinal' | 'final' | 'third_place'
 export type GameStatus = 'scheduled' | 'finished'
 /** ⚠️ значения приходят на русском, не латиницей */
 export type PlayerPosition = 'вратарь' | 'защитник' | 'нападающий'

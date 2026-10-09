@@ -22,6 +22,7 @@ import { ep } from '#shared/utils/endpoints'
  * SecurityError. Через свой домен ограничение не действует.
  */
 const route = useRoute()
+const router = useRouter()
 
 const id = computed(() => parseId(route.params.id)!)
 
@@ -39,6 +40,26 @@ const { data, status, error, refresh } = await usePageData(
     return { team, rosters }
   },
   { watch: [id] },
+)
+
+// Выбор сохраняется в ссылке и восстанавливается при переходах назад/вперёд.
+const selectedCompetition = computed({
+  get: () => {
+    const value = String(route.query.competition ?? 'all')
+    return data.value?.rosters.some(r => String(r.competitionId) === value) ? value : 'all'
+  },
+  set: (value: string) => {
+    router.push({
+      path: route.path,
+      query: { ...route.query, competition: value === 'all' ? undefined : value },
+    })
+  },
+})
+
+const visibleRosters = computed(() =>
+  (data.value?.rosters ?? []).filter(r =>
+    selectedCompetition.value === 'all' || String(r.competitionId) === selectedCompetition.value,
+  ),
 )
 
 /**
@@ -117,7 +138,7 @@ async function print() {
 
 const teamName = computed(() => data.value?.team.name ?? '')
 const totalPlayers = computed(() =>
-  (data.value?.rosters ?? []).reduce((n, r) => n + r.players.length, 0),
+  visibleRosters.value.reduce((n, r) => n + r.players.length, 0),
 )
 
 useHead(() => ({ title: teamName.value ? `Состав — ${teamName.value}` : 'Состав команды' }))
@@ -177,8 +198,32 @@ useHead(() => ({ title: teamName.value ? `Состав — ${teamName.value}` : 
         </button>
       </div>
 
+      <div
+        v-if="data.rosters.length > 1"
+        class="mb-5 print:hidden"
+      >
+        <label
+          for="squad-competition"
+          class="mb-2 block text-sm font-semibold"
+        >Состав для скачивания</label>
+        <select
+          id="squad-competition"
+          v-model="selectedCompetition"
+          class="min-h-12 w-full rounded-xl border border-rule bg-surface px-3 text-[15px] sm:max-w-md"
+        >
+          <option value="all">Все соревнования</option>
+          <option
+            v-for="entry in data.rosters"
+            :key="entry.competitionId"
+            :value="String(entry.competitionId)"
+          >
+            {{ entry.competition?.name ?? `Соревнование №${entry.competitionId}` }}
+          </option>
+        </select>
+      </div>
+
       <section
-        v-for="entry in data.rosters"
+        v-for="entry in visibleRosters"
         :key="entry.competitionId"
         class="mb-8 last:mb-0"
       >
