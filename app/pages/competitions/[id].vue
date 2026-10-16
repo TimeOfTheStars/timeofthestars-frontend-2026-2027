@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type {
-  BestPlayer,
   Competition,
   CompetitionPlayerWithStats,
   Game,
@@ -14,9 +13,9 @@ import { ep } from '#shared/utils/endpoints'
  * Разделы — ССЫЛКАМИ (?tab=…), а не компонентом-табами: шарятся в мессенджер,
  * индексируются, работают без JS, корректно ведут себя по «назад».
  *
- * Всё грузится одним useAsyncData в Promise.all. best-players запрашиваем
- * всегда, не глядя на show_best_players: узнать флаг можно только из ответа по
- * соревнованию, а ждать его — это водопад ради дешёвого агрегата.
+ * Всё грузится одним useAsyncData в Promise.all. Статистика игроков
+ * (снайперы, бомбардиры, ассистенты) считается из состава со статистикой —
+ * отдельный best-players не нужен.
  */
 const route = useRoute()
 
@@ -30,14 +29,13 @@ const id = computed(() => parseId(route.params.id)!)
 const { data, status, error, refresh } = await usePageData(
   () => `competition:${id.value}`,
   async ($api) => {
-    const [competition, standings, roster, games, best] = await Promise.all([
+    const [competition, standings, roster, games] = await Promise.all([
       $api<Competition>(ep.competition(id.value)),
       $api<StandingRow[]>(ep.standings(id.value)),
       $api<CompetitionPlayerWithStats[]>(ep.roster(id.value)),
       $api<Game[]>(ep.competitionGames(id.value)),
-      $api<BestPlayer[]>(ep.bestPlayers(id.value), { query: { limit: 10 } }),
     ])
-    return { competition, standings, roster, games, best }
+    return { competition, standings, roster, games }
   },
   { watch: [id] },
 )
@@ -61,9 +59,8 @@ const winner = computed(() => team(competition.value?.winner_team_id ?? null))
 const showPlayoff = computed(
   () => !!competition.value?.show_playoff_bracket && playoffGames.value.length > 0,
 )
-const showBest = computed(
-  () => !!competition.value?.show_best_players && (data.value?.best.length ?? 0) > 0,
-)
+/** Статистику показываем всегда, как только в соревновании есть хоть одно очко */
+const showStats = computed(() => hasLeaders(data.value?.roster ?? []))
 
 const segments = computed(() => {
   const out = [
@@ -71,13 +68,15 @@ const segments = computed(() => {
     { key: 'schedule', label: 'Календарь', count: games.value.length || null },
     { key: 'roster', label: 'Составы', count: data.value?.roster.length || null },
   ]
-  if (showBest.value) out.push({ key: 'best', label: 'Лучшие' })
+  if (showStats.value) out.push({ key: 'stats', label: 'Статистика' })
   if (showPlayoff.value) out.push({ key: 'playoff', label: 'Плей-офф' })
   return out
 })
 
 const tab = computed(() => {
-  const t = String(route.query.tab ?? '')
+  const raw = String(route.query.tab ?? '')
+  // Бывшая вкладка «Лучшие»: старые ссылки ведут в «Статистику»
+  const t = raw === 'best' ? 'stats' : raw
   return segments.value.some(s => s.key === t) ? t : 'standings'
 })
 
@@ -111,7 +110,7 @@ const SECTION_TITLE: Record<string, string> = {
   standings: 'Турнирная таблица',
   schedule: 'Календарь и результаты',
   roster: 'Составы команд',
-  best: 'Лучшие игроки',
+  stats: 'Статистика игроков',
   playoff: 'Плей-офф',
 }
 
@@ -289,12 +288,9 @@ useSeoMeta({
           />
         </section>
 
-        <!-- Лучшие игроки -->
-        <section v-else-if="tab === 'best'">
-          <BestPlayersList
-            :players="data!.best"
-            :roster="data!.roster"
-          />
+        <!-- Статистика игроков -->
+        <section v-else-if="tab === 'stats'">
+          <CompetitionLeaders :roster="data!.roster" />
         </section>
 
         <!-- Сетка плей-офф -->
