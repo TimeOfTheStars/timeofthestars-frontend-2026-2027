@@ -95,7 +95,10 @@ jobs:
             set -euo pipefail
             cd /srv/timeofthestars
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
-            docker compose pull
+            # Только web: Caddy уже лежит на сервере, а анонимный запрос к
+            # Docker Hub упирается в лимит (429) и валит всю выкатку.
+            # Обновить Caddy: docker compose pull caddy на сервере.
+            docker compose pull web
             # Поднимаем весь стек, а не только web: на первой выкатке Caddy
             # ещё не существует, а дальше compose его не тронет, пока не
             # поменяется его конфиг или образ.
