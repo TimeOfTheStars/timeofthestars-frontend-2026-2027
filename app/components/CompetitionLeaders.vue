@@ -41,6 +41,7 @@ const assistants = computed(() => buildLeaders(props.roster, 'assists'))
 
     <p class="mt-3 px-1 text-xs text-muted">
       Очки = голы + передачи. При равенстве выше тот, кто сыграл меньше матчей.
+      Учитываются все стадии, включая плей-офф.
     </p>
   </div>
 

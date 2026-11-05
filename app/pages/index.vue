@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Competition, Game, Homepage, HomepageBlock, Page, StandingRow } from '#shared/types/api'
+import type { BestPlayer, Competition, Game, Homepage, HomepageBlock, Page, StandingRow } from '#shared/types/api'
 import { ep, teamGamesQuery } from '#shared/utils/endpoints'
 
 /**
@@ -34,11 +34,17 @@ const { data, status, error, refresh } = await usePageData('home', async ($api) 
   ])]
   const standingsIds = blocks.filter(b => b.type === 'standings').map(b => b.competition_id)
 
-  // Оба веера в одном Promise.all: последовательные await дали бы водопад.
+  // Все веера в одном Promise.all: последовательные await дали бы водопад.
   // Упавшее соревнование не должно ронять главную целиком.
-  const [gamesList, standingsList] = await Promise.all([
+  const [gamesList, standingsList, bestList] = await Promise.all([
     Promise.all(gameIds.map(id => $api<Game[]>(ep.competitionGames(id)).catch(() => [] as Game[]))),
     Promise.all(standingsIds.map(id => $api<StandingRow[]>(ep.standings(id)).catch(() => [] as StandingRow[]))),
+    // Кнопке «Лучшие игроки» нужно знать, есть ли статистика: без очков такой
+    // вкладки нет. Сервер сортирует по очкам ↓ и отдаёт и нули, поэтому хватает
+    // первой строки — полный состав ради этого не тянем.
+    Promise.all(gameIds.map(id =>
+      $api<BestPlayer[]>(ep.bestPlayers(id), { query: { limit: 1 } }).catch(() => [] as BestPlayer[]),
+    )),
   ])
 
   const gamesBy = new Map(gameIds.map((id, i) => [id, gamesList[i] ?? []]))
@@ -56,6 +62,7 @@ const { data, status, error, refresh } = await usePageData('home', async ($api) 
         : [],
     })),
     competitions: all.items,
+    statsIds: gameIds.filter((_, i) => (bestList[i]?.[0]?.points ?? 0) > 0),
   }
 })
 
@@ -119,13 +126,10 @@ useSeoMeta({
 
 <template>
   <div>
-    <!--
-      Заставка идёт ДО состояний загрузки и ошибки намеренно: она статична
-      и не зависит от API, поэтому первый экран рисуется всегда — и пока
-      данные едут, и когда пришли устаревшие. (Полный отказ API — другое
-      дело: usePageData бросает 503, и страницу перехватывает error.vue.)
-    -->
-    <HomeHero />
+    <!-- Видимого заголовка у главной нет, но для поиска и скринридеров он нужен -->
+    <h1 class="sr-only">
+      Время звёзд — любительская хоккейная лига
+    </h1>
 
     <!-- scroll-mt-header: якорь не должен уезжать под липкую шапку -->
     <div
@@ -221,6 +225,11 @@ useSeoMeta({
             :title="data.featured.name"
             :more-to="competitionPath(data.featured)"
           />
+          <BestPlayersLink
+            v-if="data.statsIds.includes(data.featured.id)"
+            :competition-id="data.featured.id"
+            class="mt-3"
+          />
         </section>
 
         <!--
@@ -248,20 +257,28 @@ useSeoMeta({
           />
 
           <section class="mb-8">
-            <div class="mb-3 flex items-center justify-between gap-3">
-              <h2 class="min-w-0 truncate text-lg font-bold">
+            <!-- flex-wrap: длинное название не обрезается, кнопки уходят на
+                 вторую строку -->
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-x-3">
+              <h2 class="max-w-full min-w-0 truncate text-lg font-bold">
                 {{ titleOf(item.block) }}
               </h2>
-              <NuxtLink
-                :to="competitionPath({ id: item.block.competition_id })"
-                class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
-              >
-                Всё
-                <AppIcon
-                  name="chevronRight"
-                  :size="15"
+              <div class="ml-auto flex items-center gap-3">
+                <BestPlayersLink
+                  v-if="data.statsIds.includes(item.block.competition_id)"
+                  :competition-id="item.block.competition_id"
                 />
-              </NuxtLink>
+                <NuxtLink
+                  :to="competitionPath({ id: item.block.competition_id })"
+                  class="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-accent"
+                >
+                  Всё
+                  <AppIcon
+                    name="chevronRight"
+                    :size="15"
+                  />
+                </NuxtLink>
+              </div>
             </div>
 
             <GameCarousel
